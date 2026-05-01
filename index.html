@@ -3,50 +3,57 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Rider Control Pro | LIMFTEER</title>
+    <title>Control Financiero</title>
     
+    <!-- Configuración para modo App e Íconos -->
     <link rel="icon" type="image/png" href="logo.png">
     <link rel="apple-touch-icon" href="logo.png">
     <meta name="theme-color" content="#000000">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
+    <!-- Firebase SDK Compat -->
     <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore-compat.js"></script>
     
+    <!-- Librerías Externas -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
     
     <style>
         :root { --n-cyan: #00f3ff; --n-green: #39ff14; --n-red: #ff3131; }
-        body { background: #000; color: #fff; font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; overflow-x: hidden; }
+        body { background: #000; color: #fff; font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; overflow-x: hidden; touch-action: pan-y; }
         .card { background: rgba(18, 18, 18, 0.98); border-radius: 24px; padding: 1.5rem; border: 1px solid #222; }
         input { background: #111 !important; border: 1px solid #2a2a2a !important; color: var(--n-cyan) !important; text-align: center; height: 55px; border-radius: 16px; width: 100%; font-weight: 700; font-size: 1.1rem; outline: none; }
         input:focus { border-color: var(--n-cyan) !important; }
         .btn-main { font-weight: 900; display: flex; align-items: center; justify-content: center; text-transform: uppercase; border-radius: 18px; transition: 0.2s; }
         .btn-main:active { transform: scale(0.96); }
-        .tab-btn { padding: 16px 0; font-weight: 900; font-size: 11px; text-transform: uppercase; color: #444; border-bottom: 2px solid transparent; }
+        .tab-btn { padding: 16px 0; font-weight: 900; font-size: 11px; text-transform: uppercase; color: #444; border-bottom: 2px solid transparent; transition: 0.3s; }
         .tab-btn.active { color: var(--n-cyan); border-bottom: 2px solid var(--n-cyan); }
         .hidden { display: none !important; }
+        .tab-content { animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body class="max-w-md mx-auto min-h-screen flex flex-col bg-black">
 
+    <!-- VISTA LOGIN -->
     <div id="view-login" class="flex-1 flex flex-col items-center justify-center px-10 text-center">
         <div class="mb-14">
-            <h1 class="font-black text-3xl uppercase tracking-tighter italic">RIDER CONTROL</h1>
-            <p class="text-zinc-500 text-[10px] uppercase tracking-[0.5em] font-black mt-3">LIMFTEER FINANCE</p>
+            <h1 class="font-black text-3xl uppercase tracking-tighter italic">CONTROL FINANCIERO</h1>
+            <!-- Se eliminó el subtitulo LIMFTEER PRO -->
         </div>
-        <button onclick="handleLogin()" class="w-full h-16 btn-main bg-white text-black shadow-2xl">Entrar con Google</button>
+        <button onclick="handleLogin()" class="w-full h-16 btn-main bg-white text-black gap-3 shadow-2xl">Entrar con Google</button>
     </div>
 
+    <!-- VISTA APP -->
     <div id="view-app" class="hidden flex-1 flex flex-col">
         <header class="sticky top-0 bg-black/95 backdrop-blur-xl z-50 pt-8 pb-2 px-6 border-b border-zinc-900">
             <div class="flex justify-between items-center mb-6">
                 <div>
-                    <h2 id="display-user" class="font-black text-sm uppercase">Hola, Rider</h2>
+                    <h2 id="display-user" class="font-black text-sm uppercase text-white">Hola, Rider</h2>
                     <p id="mundial-countdown" class="text-[9px] text-cyan-400 font-black uppercase tracking-wider mt-1 italic"></p>
                 </div>
                 <button onclick="handleLogout()" class="text-[9px] font-black text-zinc-500 uppercase border border-zinc-800 px-4 py-2 rounded-xl">Salir</button>
@@ -58,28 +65,33 @@
             </nav>
         </header>
 
-        <main class="flex-1 pb-40">
-            <div id="tab-registro" class="p-6 space-y-6">
+        <main class="flex-1 pb-44 overflow-x-hidden">
+            <!-- TAB: REGISTRO -->
+            <div id="tab-registro" class="tab-content p-6 space-y-6">
                 <div id="edit-indicator" class="hidden bg-yellow-500/10 border border-yellow-500/30 p-3 rounded-xl text-center">
-                    <p class="text-[10px] font-black text-yellow-500 uppercase italic">Modo Edición</p>
-                    <button onclick="cancelEdit()" class="text-[9px] text-white underline font-bold">Cancelar</button>
+                    <p class="text-[10px] font-black text-yellow-500 uppercase italic">Modo Edición Activado</p>
+                    <button onclick="cancelEdit()" class="text-[9px] text-white underline font-bold">Cancelar edición</button>
                 </div>
+                
                 <div class="card"><input type="date" id="form-date"></div>
+                
                 <div class="card border-cyan-900/30">
                     <p class="text-[10px] font-black text-cyan-400 uppercase mb-4 text-center tracking-widest italic">Liquidación App</p>
                     <div class="grid grid-cols-2 gap-3 mb-3">
                         <div><label class="text-[8px] text-zinc-600 block mb-1 uppercase font-bold text-center">Base</label><input type="number" inputmode="decimal" id="form-base"></div>
-                        <div><label class="text-[8px] text-zinc-600 block mb-1 uppercase font-bold text-center">Tips App</label><input type="number" inputmode="decimal" id="form-online"></div>
+                        <div><label class="text-[8px] text-zinc-600 block mb-1 uppercase font-bold text-center">Propinas App</label><input type="number" inputmode="decimal" id="form-online"></div>
                     </div>
                     <div class="grid grid-cols-2 gap-3">
                         <div><label class="text-[8px] text-zinc-600 block mb-1 uppercase font-bold text-center">Logros</label><input type="number" inputmode="decimal" id="form-logros"></div>
                         <div><label class="text-[8px] text-zinc-600 block mb-1 uppercase font-bold text-center">Grupo</label><input type="number" inputmode="decimal" id="form-grupo"></div>
                     </div>
                 </div>
+
                 <div class="card border-yellow-900/30">
-                    <p class="text-[10px] font-black text-yellow-500 uppercase mb-2 text-center">Efectivo Cobrado</p>
-                    <input type="number" inputmode="decimal" id="form-collected" class="!text-yellow-500">
+                    <p class="text-[10px] font-black text-yellow-500 uppercase mb-2 text-center">Adelantos en Efectivo</p>
+                    <input type="number" inputmode="decimal" id="form-collected" class="!text-yellow-500" placeholder="Dinero rendido">
                 </div>
+
                 <div class="card border-green-900/30 bg-green-500/[0.02]">
                     <div class="flex justify-between items-center mb-4"><span class="text-[10px] font-black text-green-500 uppercase">Propinas Mano</span><span id="display-tip-total" class="text-3xl font-black text-green-400">$0</span></div>
                     <div class="grid grid-cols-3 gap-3 mb-4">
@@ -88,23 +100,29 @@
                         <button onclick="addTip(1000)" class="h-12 rounded-xl bg-zinc-900 text-green-400 border border-zinc-800 text-[10px] font-black">+$1k</button>
                     </div>
                     <div class="flex gap-2 mb-4">
-                        <input type="number" inputmode="decimal" id="form-tip-manual" placeholder="Otro monto" class="flex-1 !text-left px-4 !text-green-400 h-[45px]">
+                        <input type="number" inputmode="decimal" id="form-tip-manual" placeholder="Monto" class="flex-1 !text-left px-4 !text-green-400 h-[45px]">
                         <button onclick="addManualTip()" class="bg-green-600 text-black px-6 rounded-xl font-black text-[10px] uppercase">Sumar</button>
                     </div>
                     <div id="tips-log" class="max-h-32 overflow-y-auto space-y-1"></div>
                 </div>
+
                 <div class="card border-red-900/30">
                     <p class="text-[10px] font-black text-red-500 uppercase mb-2 text-center">Gasto Nafta</p>
                     <input type="number" inputmode="decimal" id="form-gas" class="!text-red-500">
                 </div>
             </div>
-            <div id="tab-historial" class="p-6 hidden space-y-4"></div>
-            <div id="tab-balances" class="p-6 hidden space-y-4"></div>
+
+            <div id="tab-historial" class="tab-content p-6 hidden space-y-4">
+                <div id="weekly-cut" class="space-y-4"></div>
+                <div id="history-list" class="space-y-4 pb-10"></div>
+            </div>
+
+            <div id="tab-balances" class="tab-content p-6 hidden space-y-4"></div>
         </main>
 
         <div class="fixed bottom-0 left-0 right-0 p-6 bg-black/95 backdrop-blur-2xl border-t border-zinc-900 max-w-md mx-auto z-40 flex gap-4">
-            <button onclick="saveRecord()" id="btn-save" class="flex-[3] h-16 btn-main bg-white text-black text-[11px] font-black">Guardar Jornada</button>
-            <button onclick="exportExcel()" class="flex-[2] h-16 btn-main border border-green-500 text-green-500 text-[9px] text-center">Exportar a<br>Excel</button>
+            <button onclick="saveRecord()" id="btn-save" class="flex-[3] h-16 btn-main bg-white text-black text-[11px] font-black shadow-[0_0_20px_rgba(255,255,255,0.1)]">Guardar Jornada</button>
+            <button onclick="exportExcel()" class="flex-[2] h-16 btn-main border border-green-500 text-green-500 text-[9px] text-center leading-tight">Exportar a<br>Excel</button>
         </div>
     </div>
 
@@ -119,7 +137,21 @@
         };
         firebase.initializeApp(fbConfig);
         const auth = firebase.auth(); const db = firebase.firestore(); const APP_ID = 'control-rider-eze';
-        let user = null, records = [], dailyTips = [], editingId = null;
+        let user = null, records = [], dailyTips = [], editingId = null, currentTab = 'registro';
+
+        // GESTOS SWIPE
+        let touchstartX = 0, touchendX = 0;
+        const tabs = ['registro', 'historial', 'balances'];
+        window.addEventListener('touchstart', e => { touchstartX = e.changedTouches[0].screenX; });
+        window.addEventListener('touchend', e => { 
+            touchendX = e.changedTouches[0].screenX; 
+            const diff = touchstartX - touchendX;
+            const idx = tabs.indexOf(currentTab);
+            if (Math.abs(diff) > 80) {
+                if (diff > 0 && idx < 2) changeTab(tabs[idx+1]);
+                if (diff < 0 && idx > 0) changeTab(tabs[idx-1]);
+            }
+        });
 
         auth.onAuthStateChanged(u => {
             user = u;
@@ -127,14 +159,18 @@
                 document.getElementById('view-login').classList.add('hidden');
                 document.getElementById('view-app').classList.remove('hidden');
                 document.getElementById('display-user').innerText = "Hola, " + u.displayName.split(' ')[0];
-                const m = new Date('2026-06-11'); const d = Math.ceil((m - new Date()) / 864e5);
-                document.getElementById('mundial-countdown').innerText = `Faltan ${d} dias para el mundial 🇦🇷`;
-                fetchData();
+                updateCountdown(); fetchData();
             } else {
                 document.getElementById('view-login').classList.remove('hidden');
                 document.getElementById('view-app').classList.add('hidden');
             }
         });
+
+        function updateCountdown() {
+            const m = new Date('2026-06-11T00:00:00');
+            const d = Math.ceil((m - new Date()) / (1000 * 60 * 60 * 24));
+            document.getElementById('mundial-countdown').innerText = `Faltan ${d} dias para el mundial 🇦🇷`;
+        }
 
         async function fetchData() {
             if(!user) return;
@@ -157,7 +193,7 @@
 
         async function saveRecord() {
             const date = document.getElementById('form-date').value;
-            if(!date) return alert("Elegí fecha");
+            if(!date) return alert("Elegí una fecha");
             const d = new Date(date + 'T12:00:00');
             const data = {
                 date, month: d.getMonth(), year: d.getFullYear(), week: getWeekNumber(d),
@@ -173,7 +209,7 @@
             };
             const ref = db.collection('artifacts').doc(APP_ID).collection('users').doc(user.uid).collection('jornadas');
             if(editingId) await ref.doc(editingId).update(data); else await ref.add(data);
-            alert(editingId ? "Actualizado" : "Guardado");
+            alert(editingId ? "¡Actualizado!" : "¡Guardado!");
             cancelEdit(); fetchData();
         }
 
@@ -183,40 +219,88 @@
             ['base','online','logros','grupo','collected','gas'].forEach(k => document.getElementById('form-'+k).value = r[k]);
             dailyTips = r.tipsDetail || []; updateTipUI();
             document.getElementById('edit-indicator').classList.remove('hidden');
-            document.getElementById('btn-save').innerText = "Actualizar";
+            document.getElementById('btn-save').innerText = "Actualizar Jornada";
             changeTab('registro');
         }
 
         async function deleteRecord(id) { if(confirm("¿Borrar jornada?")) { await db.collection('artifacts').doc(APP_ID).collection('users').doc(user.uid).collection('jornadas').doc(id).delete(); fetchData(); } }
         function cancelEdit() { editingId = null; ['base','online','logros','grupo','collected','gas'].forEach(k => document.getElementById('form-'+k).value = ''); dailyTips = []; updateTipUI(); document.getElementById('edit-indicator').classList.add('hidden'); document.getElementById('btn-save').innerText = "Guardar Jornada"; }
-        function changeTab(t) { ['registro','historial','balances'].forEach(v => { document.getElementById('tab-'+v).classList.add('hidden'); document.getElementById('btn-'+v).classList.remove('active'); }); document.getElementById('tab-'+t).classList.remove('hidden'); document.getElementById('btn-'+t).classList.add('active'); }
+        function changeTab(t) { currentTab = t; ['registro','historial','balances'].forEach(v => { document.getElementById('tab-'+v).classList.add('hidden'); document.getElementById('btn-'+v).classList.remove('active'); }); document.getElementById('tab-'+t).classList.remove('hidden'); document.getElementById('btn-'+t).classList.add('active'); window.scrollTo(0,0); }
         function getWeekNumber(d) { d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7)); return Math.ceil((((d - new Date(Date.UTC(d.getUTCFullYear(), 0, 1))) / 864e5) + 1) / 7); }
 
         function renderHistory() {
-            const c = document.getElementById('tab-historial'); c.innerHTML = '<h3 class="text-center text-[10px] font-black uppercase mb-4 italic text-zinc-600">Historial</h3>';
+            const list = document.getElementById('history-list'); list.innerHTML = '';
+            const cut = document.getElementById('weekly-cut'); cut.innerHTML = '';
+            const now = new Date(); const curW = getWeekNumber(now); const curY = now.getFullYear();
+            const weekRecs = records.filter(r => r.week === curW && r.year === curY);
+            const totApp = weekRecs.reduce((s, r) => s + r.base + r.online + r.logros + r.grupo, 0);
+            const totAde = weekRecs.reduce((s, r) => s + r.collected, 0);
+            const aCobrar = totApp - totAde;
+
+            cut.innerHTML = `
+                <div class="card border border-cyan-500/20 bg-cyan-500/[0.04]">
+                    <div class="flex justify-between items-center mb-4">
+                        <span class="text-[9px] font-black text-cyan-400 uppercase tracking-widest italic">Corte Semanal (Sem ${curW})</span>
+                        <span class="bg-cyan-500/10 text-cyan-400 text-[7px] px-2 py-1 rounded-lg font-black uppercase">Liquidación</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="text-center border-r border-zinc-900">
+                            <p class="text-[7px] text-zinc-500 uppercase font-black mb-1 italic">Cobro Banco</p>
+                            <p class="text-xl font-black text-white">$${Math.round(aCobrar).toLocaleString()}</p>
+                        </div>
+                        <div class="text-center">
+                            <p class="text-[7px] text-zinc-500 uppercase font-black mb-1 italic">Adelantos (Efe)</p>
+                            <p class="text-xl font-black text-yellow-500">$${Math.round(totAde).toLocaleString()}</p>
+                        </div>
+                    </div>
+                </div>
+                <h3 class="text-center text-[9px] font-black uppercase italic text-zinc-700 tracking-widest py-2 underline decoration-cyan-500/30">Historial de Jornadas</h3>
+            `;
+
+            const ds = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
             records.forEach(r => {
-                const app = r.base + r.online + r.logros + r.grupo; const net = app + r.propinasMano - r.gas;
-                c.innerHTML += `<div class="card border-l-4 border-cyan-500 mb-3"><div class="flex justify-between items-start"><div><p class="text-[8px] text-zinc-500">${r.date}</p><p class="text-xl font-black">$${Math.round(net).toLocaleString()} <span class="text-[10px] text-zinc-700">NETO</span></p></div><div class="flex gap-2"><button onclick="editRecord('${r.id}')" class="bg-zinc-900 px-2 py-1 rounded text-cyan-400 text-[10px]">Edit</button><button onclick="deleteRecord('${r.id}')" class="bg-zinc-900 px-2 py-1 rounded text-red-500 text-[10px]">X</button></div></div></div>`;
+                const appT = r.base + r.online + r.logros + r.grupo;
+                const netD = appT + r.propinasMano - r.gas;
+                const nomD = ds[new Date(r.date + 'T12:00:00').getDay()];
+                list.innerHTML += `
+                    <div class="card border-l-4 border-cyan-500 mb-3 bg-zinc-950/40">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="text-[8px] text-zinc-600 font-black uppercase">${nomD} ${r.date.split('-').reverse().slice(0,2).join('/')}</p>
+                                <p class="text-xl font-black">$${Math.round(netD).toLocaleString()} <span class="text-[9px] text-zinc-700 italic">NETO</span></p>
+                            </div>
+                            <div class="flex gap-2">
+                                <button onclick="editRecord('${r.id}')" class="bg-zinc-900 px-3 py-2 rounded-xl text-cyan-400 text-[9px] font-black uppercase">Edit</button>
+                                <button onclick="deleteRecord('${r.id}')" class="bg-zinc-900 px-3 py-2 rounded-xl text-red-500 text-[9px] font-black uppercase">X</button>
+                            </div>
+                        </div>
+                    </div>`;
             });
         }
 
         function renderBalances() {
-            const c = document.getElementById('tab-balances'); c.innerHTML = '<h3 class="text-center text-[10px] font-black uppercase mb-4 italic text-zinc-600">Balances (Toca mes para ver semanas)</h3>';
+            const bal = document.getElementById('tab-balances'); 
+            bal.innerHTML = '<h3 class="text-center text-[10px] font-black uppercase mb-6 italic text-zinc-600 tracking-widest">Balances Mensuales</h3>';
             const m = {}; records.forEach(r => { const k = `${r.year}-${r.month}`; if(!m[k]) m[k] = []; m[k].push(r); });
             Object.keys(m).sort().reverse().forEach(k => {
                 const data = m[k]; const tNet = data.reduce((s, r) => s + (r.base + r.online + r.logros + r.grupo + r.propinasMano - r.gas), 0);
-                let wkHtml = ''; const w = {}; data.forEach(r => { if(!w[r.week]) w[r.week] = 0; w[r.week] += (r.base + r.online + r.logros + r.grupo + r.propinasMano - r.gas); });
-                Object.keys(w).forEach(wk => wkHtml += `<div class="flex justify-between py-2 border-b border-white/5 text-[10px]"><span>Semana ${wk}</span><span class="text-cyan-400 font-bold">$${Math.round(w[wk]).toLocaleString()}</span></div>`);
+                let wkH = ''; const w = {}; data.forEach(r => { if(!w[r.week]) w[r.week] = 0; w[r.week] += (r.base + r.online + r.logros + r.grupo + r.propinasMano - r.gas); });
+                Object.keys(w).sort().reverse().forEach(wk => wkH += `<div class="flex justify-between py-3 border-b border-white/5 text-[10px]"><span>Semana ${wk}</span><span class="text-cyan-400 font-bold">$${Math.round(w[wk]).toLocaleString()}</span></div>`);
                 const mesNom = new Date(data[0].date + 'T12:00:00').toLocaleString('es', {month:'long', year:'numeric'}).toUpperCase();
-                c.innerHTML += `<div class="card" onclick="this.querySelector('.weeks').classList.toggle('hidden')"><div class="flex justify-between"><b>${mesNom}</b><b class="text-green-400">$${Math.round(tNet).toLocaleString()}</b></div><div class="weeks hidden mt-4 border-t border-white/5 pt-2">${wkHtml}</div></div>`;
+                bal.innerHTML += `<div class="card" onclick="this.querySelector('.weeks').classList.toggle('hidden')"><div class="flex justify-between items-center"><b>${mesNom}</b><b class="text-green-400">$${Math.round(tNet).toLocaleString()}</b></div><div class="weeks hidden mt-4 border-t border-white/5 pt-2">${wkH}</div></div>`;
             });
         }
 
         function exportExcel() {
             if(!records.length) return alert("Sin datos");
-            const data = records.map(r => ({ Fecha: r.date, Base: r.base, Logros: r.logros, Grupo: r.grupo, Tips_App: r.online, Tips_Mano: r.propinasMano, Nafta: r.gas, Neto: (r.base + r.online + r.logros + r.grupo + r.propinasMano) - r.gas, Deposito: (r.base + r.online + r.logros + r.grupo) - r.collected }));
-            const ws = XLSX.utils.json_to_sheet(data); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Rutas");
-            XLSX.writeFile(wb, `Rider_Report_${Date.now()}.xlsx`);
+            const dShort = ["Dom", "Lun", "Mar", "Mie", "Jue", "Vie", "Sab"];
+            const exData = records.map(r => {
+                const totApp = r.base + r.logros + r.grupo + r.online;
+                const dNom = dShort[new Date(r.date + 'T12:00:00').getDay()];
+                return { Día: dNom, Fecha: r.date, Semana: r.week, Base: r.base, Logros: r.logros, Grupo: r.grupo, 'Propina App': r.online, 'Propina Mano': r.propinasMano, 'Adelantos Efe': r.collected, Nafta: r.gas, 'Neto Final': (totApp + r.propinasMano) - r.gas };
+            });
+            const ws = XLSX.utils.json_to_sheet(exData); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Reporte");
+            XLSX.writeFile(wb, `Control_Financiero_${Date.now()}.xlsx`);
         }
         window.onload = () => document.getElementById('form-date').value = new Date().toISOString().split('T')[0];
     </script>

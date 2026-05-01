@@ -4,18 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Rider Finance Pro | Cloud</title>
-   
-    <link rel="icon" type="image/png" href="logo.png">
-<link rel="apple-touch-icon" href="logo.png">
-<meta name="theme-color" content="#000000">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     
-    <!-- Firebase SDK Compat -->
+    <link rel="icon" type="image/png" href="logo.png">
+    <link rel="apple-touch-icon" href="logo.png">
+    <meta name="theme-color" content="#000000">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
     <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore-compat.js"></script>
     
-    <!-- UI Libraries -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
@@ -36,7 +35,6 @@
 </head>
 <body class="max-w-md mx-auto min-h-screen flex flex-col bg-black">
 
-    <!-- LOGIN -->
     <div id="view-login" class="flex-1 flex flex-col items-center justify-center px-10 text-center">
         <div class="mb-14">
             <h1 class="font-black text-3xl uppercase tracking-tighter italic">RIDER CONTROL</h1>
@@ -48,7 +46,6 @@
         </button>
     </div>
 
-    <!-- APP -->
     <div id="view-app" class="hidden flex-1 flex flex-col">
         <header class="sticky top-0 bg-black/95 backdrop-blur-xl z-50 pt-8 pb-2 px-6 border-b border-zinc-900">
             <div class="flex justify-between items-center mb-6">
@@ -66,48 +63,28 @@
         </header>
 
         <main class="flex-1 pb-40">
-            <!-- TAB REGISTRO -->
             <div id="tab-registro" class="p-6 space-y-6">
                 <div class="card">
                     <label class="block text-[10px] font-black uppercase text-zinc-600 mb-3 text-center">Fecha de la Jornada</label>
                     <input type="date" id="form-date">
                 </div>
-
                 <div class="card border-cyan-900/30">
                     <p class="text-[10px] font-black text-cyan-400 uppercase mb-5 text-center tracking-widest">Liquidación App</p>
                     <div class="grid grid-cols-2 gap-4 mb-4">
-                        <div>
-                            <label class="text-[8px] text-zinc-500 block mb-1 ml-1 uppercase">Pago Base</label>
-                            <input type="number" inputmode="decimal" id="form-base" placeholder="0">
-                        </div>
-                        <div>
-                            <label class="text-[8px] text-zinc-500 block mb-1 ml-1 uppercase">Propina App</label>
-                            <input type="number" inputmode="decimal" id="form-online" placeholder="0">
-                        </div>
+                        <div><label class="text-[8px] text-zinc-500 block mb-1 ml-1 uppercase">Pago Base</label><input type="number" inputmode="decimal" id="form-base" placeholder="0"></div>
+                        <div><label class="text-[8px] text-zinc-500 block mb-1 ml-1 uppercase">Propina App</label><input type="number" inputmode="decimal" id="form-online" placeholder="0"></div>
                     </div>
                     <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="text-[8px] text-zinc-500 block mb-1 ml-1 uppercase">Logros</label>
-                            <input type="number" inputmode="decimal" id="form-logros" placeholder="0">
-                        </div>
-                        <div>
-                            <label class="text-[8px] text-zinc-500 block mb-1 ml-1 uppercase">Grupo</label>
-                            <input type="number" inputmode="decimal" id="form-grupo" placeholder="0">
-                        </div>
+                        <div><label class="text-[8px] text-zinc-500 block mb-1 ml-1 uppercase">Logros</label><input type="number" inputmode="decimal" id="form-logros" placeholder="0"></div>
+                        <div><label class="text-[8px] text-zinc-500 block mb-1 ml-1 uppercase">Grupo</label><input type="number" inputmode="decimal" id="form-grupo" placeholder="0"></div>
                     </div>
                 </div>
-
                 <div class="card border-yellow-900/30">
                     <p class="text-[10px] font-black text-yellow-500 uppercase mb-3 text-center">Efectivo Cobrado (Pedidos)</p>
                     <input type="number" inputmode="decimal" id="form-collected" placeholder="Dinero a rendir" class="!text-yellow-500">
                 </div>
-
-                <!-- Acumulador de Propinas -->
                 <div class="card border-green-900/30 bg-green-500/[0.02]">
-                    <div class="flex justify-between items-center mb-5">
-                        <span class="text-[10px] font-black text-green-500 uppercase">Propinas Efectivo</span>
-                        <span id="display-tip-total" class="text-3xl font-black text-green-400">$0</span>
-                    </div>
+                    <div class="flex justify-between items-center mb-5"><span class="text-[10px] font-black text-green-500 uppercase">Propinas Efectivo</span><span id="display-tip-total" class="text-3xl font-black text-green-400">$0</span></div>
                     <div class="grid grid-cols-3 gap-3 mb-4">
                         <button onclick="addQuickTip(200)" class="h-14 rounded-2xl bg-zinc-900 text-green-400 border border-zinc-800 text-xs font-black">+$200</button>
                         <button onclick="addQuickTip(500)" class="h-14 rounded-2xl bg-zinc-900 text-green-400 border border-zinc-800 text-xs font-black">+$500</button>
@@ -119,15 +96,12 @@
                     </div>
                     <div id="tips-log" class="max-h-56 overflow-y-auto space-y-2 border-t border-zinc-900 pt-5"></div>
                 </div>
-
                 <div class="card border-red-900/30">
                     <p class="text-[10px] font-black text-red-500 uppercase mb-3 text-center">Gasto Nafta</p>
                     <input type="number" inputmode="decimal" id="form-gas" placeholder="0" class="!text-red-500">
                 </div>
-
                 <button onclick="saveRecord()" id="btn-save" class="w-full btn-main bg-white text-black shadow-2xl h-[80px] text-xl">GUARDAR JORNADA</button>
             </div>
-
             <div id="tab-historial" class="p-6 hidden space-y-4"></div>
             <div id="tab-balances" class="p-6 hidden space-y-6"></div>
         </main>
@@ -147,15 +121,9 @@
             messagingSenderId: "952661224242",
             appId: "1:952661224242:web:3640495af6d4719c33052b"
         };
-
         firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
-        const db = firebase.firestore();
-        const APP_ID = 'control-rider-eze';
-
-        let user = null;
-        let records = [];
-        let dailyTips = JSON.parse(localStorage.getItem('rider_v2_propinas')) || [];
+        const auth = firebase.auth(); const db = firebase.firestore(); const APP_ID = 'control-rider-eze';
+        let user = null; let records = []; let dailyTips = JSON.parse(localStorage.getItem('rider_v2_propinas')) || [];
 
         auth.onAuthStateChanged(u => {
             user = u;
@@ -170,66 +138,34 @@
             }
         });
 
-        function handleLogin() {
-            const provider = new firebase.auth.GoogleAuthProvider();
-            auth.signInWithPopup(provider);
-        }
-
+        function handleLogin() { const provider = new firebase.auth.GoogleAuthProvider(); auth.signInWithPopup(provider); }
         function handleLogout() { if(confirm("¿Cerrar sesión?")) auth.signOut(); }
-
-        // --- LÓGICA DE PROPINAS ---
         function addQuickTip(v) { registerTip(v); }
-
-        function addManualTip() {
-            const el = document.getElementById('form-tip-manual');
-            const v = parseFloat(el.value) || 0;
-            if(v > 0) {
-                registerTip(v);
-                el.value = '';
-                el.focus();
-            }
-        }
-
-        function registerTip(amt) {
-            dailyTips.push({ 
-                id: Date.now(), 
-                amount: amt, 
-                time: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) 
-            });
-            updateTipUI();
-        }
-
+        function addManualTip() { const el = document.getElementById('form-tip-manual'); const v = parseFloat(el.value) || 0; if(v > 0) { registerTip(v); el.value = ''; el.focus(); } }
+        function registerTip(amt) { dailyTips.push({ id: Date.now(), amount: amt, time: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) }); updateTipUI(); }
         function updateTipUI() {
             localStorage.setItem('rider_v2_propinas', JSON.stringify(dailyTips));
             const total = dailyTips.reduce((s, c) => s + c.amount, 0);
             document.getElementById('display-tip-total').innerText = `$${total.toLocaleString()}`;
-            const list = document.getElementById('tips-log');
-            list.innerHTML = '';
+            const list = document.getElementById('tips-log'); list.innerHTML = '';
             [...dailyTips].reverse().forEach(t => {
-                const div = document.createElement('div');
-                div.className = "tip-item";
+                const div = document.createElement('div'); div.className = "tip-item";
                 div.innerHTML = `<span class="text-[10px] font-bold text-zinc-500">${t.time} — <b class="text-green-400">$${t.amount}</b></span><button onclick="removeTip(${t.id})" class="text-[10px] text-red-500 font-black">✕</button>`;
                 list.appendChild(div);
             });
         }
-
         function removeTip(id) { dailyTips = dailyTips.filter(t => t.id !== id); updateTipUI(); }
-
-        // --- NUBE ---
         async function fetchData() {
             if(!user) return;
             const ref = db.collection('artifacts').doc(APP_ID).collection('users').doc(user.uid).collection('jornadas');
             const snap = await ref.orderBy('date', 'desc').get();
             records = snap.docs.map(doc => ({id: doc.id, ...doc.data()}));
-            renderHistory();
-            renderBalances();
+            renderHistory(); renderBalances();
         }
-
         async function saveRecord() {
             const date = document.getElementById('form-date').value;
             if(!date) return alert("Elegí una fecha");
-            const btn = document.getElementById('btn-save');
-            btn.disabled = true; btn.innerText = "SINCRO...";
+            const btn = document.getElementById('btn-save'); btn.disabled = true; btn.innerText = "SINCRO...";
             const d = new Date(date + 'T12:00:00');
             const data = {
                 date, month: d.getMonth(), year: d.getFullYear(), week: getWeekNumber(d),
@@ -246,48 +182,39 @@
                 const ref = db.collection('artifacts').doc(APP_ID).collection('users').doc(user.uid).collection('jornadas');
                 await ref.add(data);
                 ['form-base','form-online','form-logros','form-grupo','form-collected','form-gas'].forEach(k => document.getElementById(k).value = '');
-                dailyTips = []; updateTipUI(); fetchData();
-                alert("Jornada guardada correctamente.");
+                dailyTips = []; updateTipUI(); fetchData(); alert("Jornada guardada correctamente.");
             } catch (e) { alert("Error al guardar"); }
             finally { btn.disabled = false; btn.innerText = "GUARDAR JORNADA"; }
         }
-
-        // --- UI ---
         function changeTab(t) {
             ['registro','historial','balances'].forEach(v => { document.getElementById('tab-'+v).classList.add('hidden'); document.getElementById('btn-'+v).classList.remove('active'); });
-            document.getElementById('tab-'+t).classList.remove('hidden');
-            document.getElementById('btn-'+t).classList.add('active');
-            window.scrollTo(0,0);
+            document.getElementById('tab-'+t).classList.remove('hidden'); document.getElementById('btn-'+t).classList.add('active'); window.scrollTo(0,0);
         }
-
         function renderHistory() {
             const cont = document.getElementById('tab-historial');
             cont.innerHTML = '<h3 class="text-[10px] uppercase my-6 text-center text-zinc-700 font-black italic">Resumen Diario</h3>';
             records.forEach(r => {
-                const tApp = r.base + r.online + r.logros + r.grupo;
-                const dep = tApp - r.collected;
-                const net = (tApp + r.propinasMano) - r.gas - (tApp + r.propinasMano)*0.10;
+                const tApp = r.base + r.online + r.logros + r.grupo; const dep = tApp - r.collected;
+                // --- CÁLCULO NETO LIMPIO (SIN EL 10%) ---
+                const net = (tApp + r.propinasMano) - r.gas;
                 cont.innerHTML += `<div class="card border-l-4 border-cyan-500 flex justify-between items-center mb-4 bg-zinc-950/40"><div><p class="text-[8px] text-zinc-600 font-black">${r.date}</p><p class="text-2xl font-black text-white">$${Math.round(net).toLocaleString()} <span class="text-[9px] text-zinc-700 font-black">NETO</span></p><p class="text-[9px] font-bold ${dep >= 0 ? 'text-cyan-500' : 'text-orange-500'}">🏦 Depósito: $${Math.round(dep).toLocaleString()}</p></div><div class="text-right text-green-500 font-black">Propinas: $${r.propinasMano}</div></div>`;
             });
         }
-
         function renderBalances() {
             const cont = document.getElementById('tab-balances');
             cont.innerHTML = '<h3 class="text-[10px] uppercase my-6 text-center text-zinc-700 font-black italic">Balances Mensuales</h3>';
             const m = {}; records.forEach(r => { const k = `${r.year}-${r.month}`; if(!m[k]) m[k] = []; m[k].push(r); });
             Object.keys(m).sort().reverse().forEach(k => {
-                const mData = m[k];
-                const d = new Date(mData[0].date + 'T12:00:00');
+                const mData = m[k]; const d = new Date(mData[0].date + 'T12:00:00');
                 const tApp = mData.reduce((s, c) => s + c.base + c.logros + c.grupo, 0);
                 const tPropinasOn = mData.reduce((s, c) => s + c.online, 0);
                 const tPropinasMano = mData.reduce((s, c) => s + c.propinasMano, 0);
                 cont.innerHTML += `<div class="card mb-8"><p class="text-[11px] font-black text-cyan-400 uppercase tracking-widest mb-5 border-b border-zinc-900 pb-3">${d.toLocaleString('es',{month:'long',year:'numeric'}).toUpperCase()}</p><div class="grid grid-cols-2 gap-4 mb-4"><div class="bg-zinc-900/50 p-4 rounded-3xl text-center"><p class="text-[8px] text-zinc-600 font-black uppercase">Liquidación App</p><p class="text-lg font-black text-white">$${Math.round(tApp).toLocaleString()}</p></div><div class="bg-zinc-900/50 p-4 rounded-3xl text-center"><p class="text-[8px] text-zinc-600 font-black uppercase">Propinas Online</p><p class="text-lg font-black text-green-400">$${Math.round(tPropinasOn).toLocaleString()}</p></div></div><div class="bg-green-500/5 p-4 rounded-3xl border border-green-500/10 text-center"><p class="text-[8px] text-green-700 font-black uppercase">Total Propinas en Mano</p><p class="text-xl font-black text-green-400">$${Math.round(tPropinasMano).toLocaleString()}</p></div></div>`;
             });
         }
-
         function getWeekNumber(d) { d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7)); return Math.ceil((((d - new Date(Date.UTC(d.getUTCFullYear(), 0, 1))) / 86400000) + 1) / 7); }
         function exportExcel() { if(records.length === 0) return alert("Sin datos"); const wb = XLSX.utils.book_new(); const ws = XLSX.utils.json_to_sheet(records); XLSX.utils.book_append_sheet(wb, ws, "Historial"); XLSX.writeFile(wb, `Planilla_Rider_${Date.now()}.xlsx`); }
-        async function clearCloud() { if(confirm("¿Borrar historial de la nube?")) { const ref = db.collection('artifacts').doc(APP_ID).collection('users').doc(user.uid).collection('jornadas'); const snap = await ref.get(); const batch = db.batch(); snap.forEach(doc => batch.delete(doc.ref)); await batch.commit(); fetchData(); } }
+        async function clearCloud() { if(confirm("¿Borrar historial?")) { const ref = db.collection('artifacts').doc(APP_ID).collection('users').doc(user.uid).collection('jornadas'); const snap = await ref.get(); const batch = db.batch(); snap.forEach(doc => batch.delete(doc.ref)); await batch.commit(); fetchData(); } }
         window.onload = () => { document.getElementById('form-date').value = new Date().toISOString().split('T')[0]; updateTipUI(); };
     </script>
 </body>

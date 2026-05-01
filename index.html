@@ -11,12 +11,103 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
-    <!-- Firebase SDK Compat -->
-    <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore-compat.js"></script>
+    <!-- Firebase SDK Modular (Más estable para móviles) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+        import { getAuth, signInWithRedirect, getRedirectResult, GoogleAuthProvider, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+        import { getFirestore, collection, doc, getDocs, addDoc, updateDoc, deleteDoc, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDGUD-PIo2zFBkiFqfkN0Fpaqqp5_jNInw",
+            authDomain: "control-financiero-rider.firebaseapp.com",
+            projectId: "control-financiero-rider",
+            storageBucket: "control-financiero-rider.firebasestorage.app",
+            messagingSenderId: "952661224242",
+            appId: "1:952661224242:web:3640495af6d4719c33052b"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const APP_ID = 'control-rider-eze';
+
+        // Hacer globales las funciones para que funcionen con los botones HTML
+        window.handleLogin = async () => {
+            const provider = new GoogleAuthProvider();
+            provider.setCustomParameters({ prompt: 'select_account' });
+            try {
+                await setPersistence(auth, browserLocalPersistence);
+                await signInWithRedirect(auth, provider);
+            } catch (err) { alert("Error al iniciar Google"); }
+        };
+
+        window.handleLogout = () => {
+            if(confirm("¿Cerrar sesión?")) {
+                signOut(auth).then(() => {
+                    localStorage.clear();
+                    location.reload();
+                });
+            }
+        };
+
+        // Guardia de Seguridad: Espera al resultado del redirect y al cambio de estado
+        let authChecked = false;
+        
+        async function initAuth() {
+            try {
+                // Primero chequeamos si venimos de un redirect
+                await getRedirectResult(auth);
+            } catch (error) {
+                console.error("Error en redirect result", error);
+            }
+
+            onAuthStateChanged(auth, (u) => {
+                window.user = u;
+                document.getElementById('view-loading').classList.add('hidden');
+                if (u) {
+                    document.getElementById('view-login').classList.add('hidden');
+                    document.getElementById('view-app').classList.remove('hidden');
+                    document.getElementById('display-user').innerText = "Hola, " + u.displayName.split(' ')[0];
+                    window.fetchData();
+                    window.updateCountdown();
+                } else {
+                    document.getElementById('view-login').classList.remove('hidden');
+                    document.getElementById('view-app').classList.add('hidden');
+                }
+            });
+        }
+
+        window.fetchData = async () => {
+            if(!window.user) return;
+            const ref = collection(db, 'artifacts', APP_ID, 'users', window.user.uid, 'jornadas');
+            const q = query(ref, orderBy('date', 'desc'));
+            const snap = await getDocs(q);
+            window.records = snap.docs.map(d => ({id: d.id, ...d.data()}));
+            window.renderHistory();
+            window.renderBalances();
+        };
+
+        window.saveToFirebase = async (data, id = null) => {
+            const ref = collection(db, 'artifacts', APP_ID, 'users', window.user.uid, 'jornadas');
+            if(id) {
+                const docRef = doc(db, 'artifacts', APP_ID, 'users', window.user.uid, 'jornadas', id);
+                await updateDoc(docRef, {...data, updatedAt: serverTimestamp()});
+            } else {
+                await addDoc(ref, {...data, createdAt: serverTimestamp()});
+            }
+            window.fetchData();
+        };
+
+        window.deleteFromFirebase = async (id) => {
+            const docRef = doc(db, 'artifacts', APP_ID, 'users', window.user.uid, 'jornadas', id);
+            await deleteDoc(docRef);
+            window.fetchData();
+        };
+
+        // Iniciar el proceso de auth al cargar
+        initAuth();
+    </script>
     
-    <!-- UI & Tools -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
@@ -37,7 +128,7 @@
 </head>
 <body class="max-w-md mx-auto min-h-screen flex flex-col bg-black">
 
-    <!-- PANTALLA CARGA (Se muestra por defecto) -->
+    <!-- PANTALLA CARGA -->
     <div id="view-loading" class="flex-1 flex flex-col items-center justify-center p-10 text-center">
         <div class="loading-spinner mb-4"></div>
         <p class="text-[9px] font-black uppercase tracking-[0.3em] text-zinc-500">Iniciando Control...</p>
@@ -48,9 +139,7 @@
         <div class="mb-14">
             <h1 class="font-black text-3xl uppercase tracking-tighter italic text-white">CONTROL FINANCIERO</h1>
         </div>
-        <button onclick="handleLogin()" id="btn-login-google" class="w-full h-16 btn-main bg-white text-black gap-3 shadow-2xl">
-            Entrar con Google
-        </button>
+        <button onclick="handleLogin()" class="w-full h-16 btn-main bg-white text-black gap-3 shadow-2xl">Entrar con Google</button>
         <p class="mt-8 text-[8px] text-zinc-600 uppercase font-bold tracking-widest">Usar Chrome o Safari para evitar errores</p>
     </div>
 
@@ -117,13 +206,11 @@
                 </div>
             </div>
 
-            <!-- HISTORIAL -->
             <div id="tab-historial" class="p-6 hidden space-y-4">
                 <div id="weekly-cut"></div>
                 <div id="history-list" class="space-y-4"></div>
             </div>
 
-            <!-- BALANCES -->
             <div id="tab-balances" class="p-6 hidden space-y-4"></div>
         </main>
 
@@ -134,109 +221,41 @@
     </div>
 
     <script>
-        const fbConfig = {
-            apiKey: "AIzaSyDGUD-PIo2zFBkiFqfkN0Fpaqqp5_jNInw",
-            authDomain: "control-financiero-rider.firebaseapp.com",
-            projectId: "control-financiero-rider",
-            storageBucket: "control-financiero-rider.firebasestorage.app",
-            messagingSenderId: "952661224242",
-            appId: "1:952661224242:web:3640495af6d4719c33052b"
-        };
-        
-        firebase.initializeApp(fbConfig);
-        const auth = firebase.auth();
-        const db = firebase.firestore();
-        const APP_ID = 'control-rider-eze';
-        
-        auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+        // Variables globales no-firebase
+        window.records = []; window.dailyTips = []; window.editingId = null; window.currentTab = 'registro';
 
-        let user = null, records = [], dailyTips = [], editingId = null, currentTab = 'registro';
-
-        // --- GESTOS SWIPE ---
+        // GESTOS SWIPE
         let touchstartX = 0;
         window.addEventListener('touchstart', e => touchstartX = e.changedTouches[0].screenX);
         window.addEventListener('touchend', e => { 
             const diff = touchstartX - e.changedTouches[0].screenX;
             const tabs = ['registro', 'historial', 'balances'];
-            const idx = tabs.indexOf(currentTab);
+            const idx = tabs.indexOf(window.currentTab);
             if (Math.abs(diff) > 80) {
                 if (diff > 0 && idx < 2) changeTab(tabs[idx+1]);
                 if (diff < 0 && idx > 0) changeTab(tabs[idx-1]);
             }
         });
 
-        // --- LÓGICA DE LOGIN (Redirect para máxima compatibilidad) ---
-        async function handleLogin() {
-            const provider = new firebase.auth.GoogleAuthProvider();
-            provider.setCustomParameters({ prompt: 'select_account' });
-            auth.signInWithRedirect(provider);
-        }
-
-        // --- ESCUCHA DE ESTADO DE AUTENTICACIÓN (EL GUARDIA) ---
-        // Primero procesamos si volvemos de un redirect
-        auth.getRedirectResult().then((result) => {
-            // Si el result tiene usuario, el login fue exitoso
-            if (result.user) console.log("Login por redirección exitoso");
-        }).catch((error) => {
-            console.error("Error en redirección:", error);
-        });
-
-        // Luego escuchamos el estado general
-        auth.onAuthStateChanged(u => {
-            user = u;
-            // Quitamos la pantalla de carga
-            document.getElementById('view-loading').classList.add('hidden');
-            
-            if (u) {
-                document.getElementById('view-login').classList.add('hidden');
-                document.getElementById('view-app').classList.remove('hidden');
-                document.getElementById('display-user').innerText = "Hola, " + u.displayName.split(' ')[0];
-                updateCountdown();
-                fetchData();
-            } else {
-                document.getElementById('view-login').classList.remove('hidden');
-                document.getElementById('view-app').classList.add('hidden');
-            }
-        });
-
-        function handleLogout() {
-            if(confirm("¿Cerrar sesión?")) {
-                auth.signOut().then(() => {
-                    localStorage.clear();
-                    location.reload();
-                });
-            }
-        }
-
-        // --- FUNCIONES DE LA APP ---
-        async function fetchData() {
-            if(!user) return;
-            try {
-                const snap = await db.collection('artifacts').doc(APP_ID).collection('users').doc(user.uid).collection('jornadas').orderBy('date', 'desc').get();
-                records = snap.docs.map(doc => ({id: doc.id, ...doc.data()}));
-                renderHistory(); renderBalances();
-            } catch(e) { console.error("Error fetching:", e); }
-        }
-
-        function updateCountdown() {
+        window.updateCountdown = () => {
             const m = new Date('2026-06-11T00:00:00');
             const d = Math.ceil((m - new Date()) / 864e5);
             document.getElementById('mundial-countdown').innerText = `Faltan ${d} dias para el mundial 🇦🇷`;
-        }
+        };
 
-        function addTip(v) { dailyTips.push({id: Date.now(), amount: v, time: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}); updateTipUI(); }
-        function addManualTip() { const el = document.getElementById('form-tip-manual'); const v = parseFloat(el.value); if(v > 0) { addTip(v); el.value = ''; } }
-        function updateTipUI() {
-            const total = dailyTips.reduce((s, c) => s + c.amount, 0);
+        window.addTip = (v) => { window.dailyTips.push({id: Date.now(), amount: v, time: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}); updateTipUI(); };
+        window.addManualTip = () => { const el = document.getElementById('form-tip-manual'); const v = parseFloat(el.value); if(v > 0) { addTip(v); el.value = ''; } };
+        window.updateTipUI = () => {
+            const total = window.dailyTips.reduce((s, c) => s + c.amount, 0);
             document.getElementById('display-tip-total').innerText = `$${total.toLocaleString()}`;
             const list = document.getElementById('tips-log'); list.innerHTML = '';
-            [...dailyTips].reverse().forEach(t => {
+            [...window.dailyTips].reverse().forEach(t => {
                 list.innerHTML += `<div class="flex justify-between text-[10px] p-2 bg-white/5 rounded-lg mb-1"><span>${t.time} — <b>$${t.amount}</b></span><button onclick="removeTip(${t.id})" class="text-red-500 font-black">X</button></div>`;
             });
-        }
-        function removeTip(id) { dailyTips = dailyTips.filter(t => t.id !== id); updateTipUI(); }
+        };
+        window.removeTip = (id) => { window.dailyTips = window.dailyTips.filter(t => t.id !== id); updateTipUI(); };
 
-        async function saveRecord() {
+        window.saveRecord = async () => {
             const date = document.getElementById('form-date').value;
             if(!date) return alert("Elegí una fecha");
             const btn = document.getElementById('btn-save'); btn.disabled = true;
@@ -249,44 +268,42 @@
                 grupo: parseFloat(document.getElementById('form-grupo').value) || 0,
                 collected: parseFloat(document.getElementById('form-collected').value) || 0,
                 gas: parseFloat(document.getElementById('form-gas').value) || 0,
-                propinasMano: dailyTips.reduce((s, c) => s + c.amount, 0),
-                tipsDetail: dailyTips,
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                propinasMano: window.dailyTips.reduce((s, c) => s + c.amount, 0),
+                tipsDetail: window.dailyTips
             };
-            const ref = db.collection('artifacts').doc(APP_ID).collection('users').doc(user.uid).collection('jornadas');
             try {
-                if(editingId) await ref.doc(editingId).update(data); else await ref.add(data);
-                cancelEdit(); fetchData();
+                await window.saveToFirebase(data, window.editingId);
+                cancelEdit();
             } catch (e) { alert("Error al guardar"); }
             btn.disabled = false;
-        }
+        };
 
-        function editRecord(id) {
-            const r = records.find(x => x.id === id); if(!r) return;
-            editingId = id; document.getElementById('form-date').value = r.date;
+        window.editRecord = (id) => {
+            const r = window.records.find(x => x.id === id); if(!r) return;
+            window.editingId = id; document.getElementById('form-date').value = r.date;
             ['base','online','logros','grupo','collected','gas'].forEach(k => document.getElementById('form-'+k).value = r[k]);
-            dailyTips = r.tipsDetail || []; updateTipUI();
+            window.dailyTips = r.tipsDetail || []; updateTipUI();
             document.getElementById('edit-indicator').classList.remove('hidden');
             document.getElementById('btn-save').innerText = "Actualizar Jornada";
             changeTab('registro');
-        }
+        };
 
-        async function deleteRecord(id) { if(confirm("¿Borrar?")) { await db.collection('artifacts').doc(APP_ID).collection('users').doc(user.uid).collection('jornadas').doc(id).delete(); fetchData(); } }
-        function cancelEdit() { editingId = null; ['base','online','logros','grupo','collected','gas'].forEach(k => document.getElementById('form-'+k).value = ''); dailyTips = []; updateTipUI(); document.getElementById('edit-indicator').classList.add('hidden'); document.getElementById('btn-save').innerText = "Guardar Jornada"; }
-        function changeTab(t) { currentTab = t; ['registro','historial','balances'].forEach(v => { document.getElementById('tab-'+v).classList.add('hidden'); document.getElementById('btn-'+v).classList.remove('active'); }); document.getElementById('tab-'+t).classList.remove('hidden'); document.getElementById('btn-'+t).classList.add('active'); window.scrollTo(0,0); }
-        function getWeekNumber(d) { d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7)); return Math.ceil((((d - new Date(Date.UTC(d.getUTCFullYear(), 0, 1))) / 864e5) + 1) / 7); }
+        window.deleteRecord = async (id) => { if(confirm("¿Borrar?")) { await window.deleteFromFirebase(id); } };
+        window.cancelEdit = () => { window.editingId = null; ['base','online','logros','grupo','collected','gas'].forEach(k => document.getElementById('form-'+k).value = ''); window.dailyTips = []; updateTipUI(); document.getElementById('edit-indicator').classList.add('hidden'); document.getElementById('btn-save').innerText = "Guardar Jornada"; };
+        window.changeTab = (t) => { window.currentTab = t; ['registro','historial','balances'].forEach(v => { document.getElementById('tab-'+v).classList.add('hidden'); document.getElementById('btn-'+v).classList.remove('active'); }); document.getElementById('tab-'+t).classList.remove('hidden'); document.getElementById('btn-'+t).classList.add('active'); window.scrollTo(0,0); };
+        window.getWeekNumber = (d) => { d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7)); return Math.ceil((((d - new Date(Date.UTC(d.getUTCFullYear(), 0, 1))) / 864e5) + 1) / 7); };
 
-        function renderHistory() {
+        window.renderHistory = () => {
             const list = document.getElementById('history-list'); list.innerHTML = '';
             const cut = document.getElementById('weekly-cut'); cut.innerHTML = '';
             const now = new Date(); const curW = getWeekNumber(now); const curY = now.getFullYear();
-            const weekRecs = records.filter(r => r.week === curW && r.year === curY);
+            const weekRecs = window.records.filter(r => r.week === curW && r.year === curY);
             const totApp = weekRecs.reduce((s, r) => s + r.base + r.online + r.logros + r.grupo, 0);
             const totAde = weekRecs.reduce((s, r) => s + r.collected, 0);
             const aCobrar = totApp - totAde;
 
             cut.innerHTML = `<div class="card border border-cyan-500/20 bg-cyan-500/[0.04] mb-6">
-                <div class="flex justify-between items-center mb-4"><span class="text-[9px] font-black text-cyan-400 uppercase italic">Semana ${curW}</span><span class="bg-cyan-500/10 text-cyan-400 text-[7px] px-2 py-1 rounded-lg font-black uppercase">Corte</span></div>
+                <div class="flex justify-between items-center mb-4"><span class="text-[9px] font-black text-cyan-400 uppercase italic">Corte Semana ${curW}</span><span class="bg-cyan-500/10 text-cyan-400 text-[7px] px-2 py-1 rounded-lg font-black uppercase">Corte</span></div>
                 <div class="grid grid-cols-2 gap-4">
                     <div class="text-center border-r border-zinc-900"><p class="text-[7px] text-zinc-500 uppercase font-black mb-1 italic">Banco</p><p class="text-xl font-black text-white">$${Math.round(aCobrar).toLocaleString()}</p></div>
                     <div class="text-center"><p class="text-[7px] text-zinc-500 uppercase font-black mb-1 italic">Adelantos</p><p class="text-xl font-black text-yellow-500">$${Math.round(totAde).toLocaleString()}</p></div>
@@ -294,7 +311,7 @@
             </div>`;
 
             const ds = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
-            records.forEach(r => {
+            window.records.forEach(r => {
                 const net = (r.base + r.online + r.logros + r.grupo + r.propinasMano) - r.gas;
                 const nomD = ds[new Date(r.date + 'T12:00:00').getDay()];
                 list.innerHTML += `<div class="card border-l-4 border-cyan-500 mb-3 bg-zinc-950/40">
@@ -307,11 +324,11 @@
                     </div>
                 </div>`;
             });
-        }
+        };
 
-        function renderBalances() {
-            const bal = document.getElementById('tab-balances'); bal.innerHTML = '';
-            const m = {}; records.forEach(r => { const k = `${r.year}-${r.month}`; if(!m[k]) m[k] = []; m[k].push(r); });
+        window.renderBalances = () => {
+            const bal = document.getElementById('tab-balances'); bal.innerHTML = '<h3 class="text-center text-[10px] font-black uppercase mb-6 italic text-zinc-600 tracking-widest">Balances Mensuales</h3>';
+            const m = {}; window.records.forEach(r => { const k = `${r.year}-${r.month}`; if(!m[k]) m[k] = []; m[k].push(r); });
             Object.keys(m).sort().reverse().forEach(k => {
                 const data = m[k]; const tNet = data.reduce((s, r) => s + (r.base + r.online + r.logros + r.grupo + r.propinasMano - r.gas), 0);
                 let wkH = ''; const w = {}; data.forEach(r => { if(!w[r.week]) w[r.week] = 0; w[r.week] += (r.base + r.online + r.logros + r.grupo + r.propinasMano - r.gas); });
@@ -319,15 +336,15 @@
                 const mesNom = new Date(data[0].date + 'T12:00:00').toLocaleString('es', {month:'long', year:'numeric'}).toUpperCase();
                 bal.innerHTML += `<div class="card" onclick="this.querySelector('.weeks').classList.toggle('hidden')"><div class="flex justify-between items-center"><b>${mesNom}</b><b class="text-green-400">$${Math.round(tNet).toLocaleString()}</b></div><div class="weeks hidden mt-4 border-t border-white/5 pt-2">${wkH}</div></div>`;
             });
-        }
+        };
 
-        function exportExcel() {
-            if(!records.length) return alert("Sin datos");
-            const data = records.map(r => ({ Fecha: r.date, Neto: (r.base + r.online + r.logros + r.grupo + r.propinasMano) - r.gas }));
+        window.exportExcel = () => {
+            if(!window.records.length) return alert("Sin datos");
+            const data = window.records.map(r => ({ Fecha: r.date, Neto: (r.base + r.online + r.logros + r.grupo + r.propinasMano) - r.gas }));
             const ws = XLSX.utils.json_to_sheet(data); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Reporte");
             XLSX.writeFile(wb, `Control_${Date.now()}.xlsx`);
-        }
-        window.onload = () => document.getElementById('form-date').value = new Date().toISOString().split('T')[0];
+        };
+        window.onload = () => { document.getElementById('form-date').value = new Date().toISOString().split('T')[0]; };
     </script>
 </body>
 </html>

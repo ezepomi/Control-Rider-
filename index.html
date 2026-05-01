@@ -5,19 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Control Financiero</title>
     
-    <!-- Configuración para modo App e Íconos -->
     <link rel="icon" type="image/png" href="logo.png">
     <link rel="apple-touch-icon" href="logo.png">
     <meta name="theme-color" content="#000000">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
-    <!-- Firebase SDK Compat -->
     <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore-compat.js"></script>
     
-    <!-- Librerías Externas -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
@@ -39,21 +36,18 @@
 </head>
 <body class="max-w-md mx-auto min-h-screen flex flex-col bg-black">
 
-    <!-- VISTA LOGIN -->
     <div id="view-login" class="flex-1 flex flex-col items-center justify-center px-10 text-center">
         <div class="mb-14">
             <h1 class="font-black text-3xl uppercase tracking-tighter italic">CONTROL FINANCIERO</h1>
-            <!-- Se eliminó el subtitulo LIMFTEER PRO -->
         </div>
         <button onclick="handleLogin()" class="w-full h-16 btn-main bg-white text-black gap-3 shadow-2xl">Entrar con Google</button>
     </div>
 
-    <!-- VISTA APP -->
     <div id="view-app" class="hidden flex-1 flex flex-col">
         <header class="sticky top-0 bg-black/95 backdrop-blur-xl z-50 pt-8 pb-2 px-6 border-b border-zinc-900">
             <div class="flex justify-between items-center mb-6">
                 <div>
-                    <h2 id="display-user" class="font-black text-sm uppercase text-white">Hola, Rider</h2>
+                    <h2 id="display-user" class="font-black text-sm uppercase text-white italic">Rider</h2>
                     <p id="mundial-countdown" class="text-[9px] text-cyan-400 font-black uppercase tracking-wider mt-1 italic"></p>
                 </div>
                 <button onclick="handleLogout()" class="text-[9px] font-black text-zinc-500 uppercase border border-zinc-800 px-4 py-2 rounded-xl">Salir</button>
@@ -66,15 +60,12 @@
         </header>
 
         <main class="flex-1 pb-44 overflow-x-hidden">
-            <!-- TAB: REGISTRO -->
             <div id="tab-registro" class="tab-content p-6 space-y-6">
                 <div id="edit-indicator" class="hidden bg-yellow-500/10 border border-yellow-500/30 p-3 rounded-xl text-center">
-                    <p class="text-[10px] font-black text-yellow-500 uppercase italic">Modo Edición Activado</p>
-                    <button onclick="cancelEdit()" class="text-[9px] text-white underline font-bold">Cancelar edición</button>
+                    <p class="text-[10px] font-black text-yellow-500 uppercase italic">Modo Edición</p>
+                    <button onclick="cancelEdit()" class="text-[9px] text-white underline font-bold">Cancelar</button>
                 </div>
-                
                 <div class="card"><input type="date" id="form-date"></div>
-                
                 <div class="card border-cyan-900/30">
                     <p class="text-[10px] font-black text-cyan-400 uppercase mb-4 text-center tracking-widest italic">Liquidación App</p>
                     <div class="grid grid-cols-2 gap-3 mb-3">
@@ -86,12 +77,10 @@
                         <div><label class="text-[8px] text-zinc-600 block mb-1 uppercase font-bold text-center">Grupo</label><input type="number" inputmode="decimal" id="form-grupo"></div>
                     </div>
                 </div>
-
                 <div class="card border-yellow-900/30">
                     <p class="text-[10px] font-black text-yellow-500 uppercase mb-2 text-center">Adelantos en Efectivo</p>
                     <input type="number" inputmode="decimal" id="form-collected" class="!text-yellow-500" placeholder="Dinero rendido">
                 </div>
-
                 <div class="card border-green-900/30 bg-green-500/[0.02]">
                     <div class="flex justify-between items-center mb-4"><span class="text-[10px] font-black text-green-500 uppercase">Propinas Mano</span><span id="display-tip-total" class="text-3xl font-black text-green-400">$0</span></div>
                     <div class="grid grid-cols-3 gap-3 mb-4">
@@ -105,18 +94,15 @@
                     </div>
                     <div id="tips-log" class="max-h-32 overflow-y-auto space-y-1"></div>
                 </div>
-
                 <div class="card border-red-900/30">
                     <p class="text-[10px] font-black text-red-500 uppercase mb-2 text-center">Gasto Nafta</p>
                     <input type="number" inputmode="decimal" id="form-gas" class="!text-red-500">
                 </div>
             </div>
-
             <div id="tab-historial" class="tab-content p-6 hidden space-y-4">
                 <div id="weekly-cut" class="space-y-4"></div>
                 <div id="history-list" class="space-y-4 pb-10"></div>
             </div>
-
             <div id="tab-balances" class="tab-content p-6 hidden space-y-4"></div>
         </main>
 
@@ -153,6 +139,14 @@
             }
         });
 
+        // LOGIN REDIRECT (Para evitar bloqueos de pop-ups)
+        function handleLogin() {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            auth.signInWithRedirect(provider);
+        }
+
+        auth.getRedirectResult().catch(err => console.error("Error Login:", err));
+
         auth.onAuthStateChanged(u => {
             user = u;
             if (u) {
@@ -165,6 +159,15 @@
                 document.getElementById('view-app').classList.add('hidden');
             }
         });
+
+        function handleLogout() { 
+            if(confirm("¿Cerrar sesión?")) {
+                auth.signOut().then(() => {
+                    localStorage.clear();
+                    location.reload();
+                }).catch(() => location.reload());
+            }
+        }
 
         function updateCountdown() {
             const m = new Date('2026-06-11T00:00:00');
@@ -209,8 +212,7 @@
             };
             const ref = db.collection('artifacts').doc(APP_ID).collection('users').doc(user.uid).collection('jornadas');
             if(editingId) await ref.doc(editingId).update(data); else await ref.add(data);
-            alert(editingId ? "¡Actualizado!" : "¡Guardado!");
-            cancelEdit(); fetchData();
+            alert("¡Listo!"); cancelEdit(); fetchData();
         }
 
         function editRecord(id) {
@@ -219,11 +221,11 @@
             ['base','online','logros','grupo','collected','gas'].forEach(k => document.getElementById('form-'+k).value = r[k]);
             dailyTips = r.tipsDetail || []; updateTipUI();
             document.getElementById('edit-indicator').classList.remove('hidden');
-            document.getElementById('btn-save').innerText = "Actualizar Jornada";
+            document.getElementById('btn-save').innerText = "Actualizar";
             changeTab('registro');
         }
 
-        async function deleteRecord(id) { if(confirm("¿Borrar jornada?")) { await db.collection('artifacts').doc(APP_ID).collection('users').doc(user.uid).collection('jornadas').doc(id).delete(); fetchData(); } }
+        async function deleteRecord(id) { if(confirm("¿Borrar?")) { await db.collection('artifacts').doc(APP_ID).collection('users').doc(user.uid).collection('jornadas').doc(id).delete(); fetchData(); } }
         function cancelEdit() { editingId = null; ['base','online','logros','grupo','collected','gas'].forEach(k => document.getElementById('form-'+k).value = ''); dailyTips = []; updateTipUI(); document.getElementById('edit-indicator').classList.add('hidden'); document.getElementById('btn-save').innerText = "Guardar Jornada"; }
         function changeTab(t) { currentTab = t; ['registro','historial','balances'].forEach(v => { document.getElementById('tab-'+v).classList.add('hidden'); document.getElementById('btn-'+v).classList.remove('active'); }); document.getElementById('tab-'+t).classList.remove('hidden'); document.getElementById('btn-'+t).classList.add('active'); window.scrollTo(0,0); }
         function getWeekNumber(d) { d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7)); return Math.ceil((((d - new Date(Date.UTC(d.getUTCFullYear(), 0, 1))) / 864e5) + 1) / 7); }
@@ -239,23 +241,12 @@
 
             cut.innerHTML = `
                 <div class="card border border-cyan-500/20 bg-cyan-500/[0.04]">
-                    <div class="flex justify-between items-center mb-4">
-                        <span class="text-[9px] font-black text-cyan-400 uppercase tracking-widest italic">Corte Semanal (Sem ${curW})</span>
-                        <span class="bg-cyan-500/10 text-cyan-400 text-[7px] px-2 py-1 rounded-lg font-black uppercase">Liquidación</span>
-                    </div>
+                    <div class="flex justify-between items-center mb-4"><span class="text-[9px] font-black text-cyan-400 uppercase italic">Semana ${curW}</span><span class="bg-cyan-500/10 text-cyan-400 text-[7px] px-2 py-1 rounded-lg font-black uppercase">Liquidación</span></div>
                     <div class="grid grid-cols-2 gap-4">
-                        <div class="text-center border-r border-zinc-900">
-                            <p class="text-[7px] text-zinc-500 uppercase font-black mb-1 italic">Cobro Banco</p>
-                            <p class="text-xl font-black text-white">$${Math.round(aCobrar).toLocaleString()}</p>
-                        </div>
-                        <div class="text-center">
-                            <p class="text-[7px] text-zinc-500 uppercase font-black mb-1 italic">Adelantos (Efe)</p>
-                            <p class="text-xl font-black text-yellow-500">$${Math.round(totAde).toLocaleString()}</p>
-                        </div>
+                        <div class="text-center border-r border-zinc-900"><p class="text-[7px] text-zinc-500 uppercase font-black mb-1 italic">Banco</p><p class="text-xl font-black text-white">$${Math.round(aCobrar).toLocaleString()}</p></div>
+                        <div class="text-center"><p class="text-[7px] text-zinc-500 uppercase font-black mb-1 italic">Adelantos (Efe)</p><p class="text-xl font-black text-yellow-500">$${Math.round(totAde).toLocaleString()}</p></div>
                     </div>
-                </div>
-                <h3 class="text-center text-[9px] font-black uppercase italic text-zinc-700 tracking-widest py-2 underline decoration-cyan-500/30">Historial de Jornadas</h3>
-            `;
+                </div>`;
 
             const ds = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
             records.forEach(r => {
@@ -265,10 +256,7 @@
                 list.innerHTML += `
                     <div class="card border-l-4 border-cyan-500 mb-3 bg-zinc-950/40">
                         <div class="flex justify-between items-start">
-                            <div>
-                                <p class="text-[8px] text-zinc-600 font-black uppercase">${nomD} ${r.date.split('-').reverse().slice(0,2).join('/')}</p>
-                                <p class="text-xl font-black">$${Math.round(netD).toLocaleString()} <span class="text-[9px] text-zinc-700 italic">NETO</span></p>
-                            </div>
+                            <div><p class="text-[8px] text-zinc-600 font-black uppercase">${nomD} ${r.date.split('-').reverse().slice(0,2).join('/')}</p><p class="text-xl font-black">$${Math.round(netD).toLocaleString()} <span class="text-[9px] text-zinc-700 italic">NETO</span></p></div>
                             <div class="flex gap-2">
                                 <button onclick="editRecord('${r.id}')" class="bg-zinc-900 px-3 py-2 rounded-xl text-cyan-400 text-[9px] font-black uppercase">Edit</button>
                                 <button onclick="deleteRecord('${r.id}')" class="bg-zinc-900 px-3 py-2 rounded-xl text-red-500 text-[9px] font-black uppercase">X</button>
@@ -280,7 +268,7 @@
 
         function renderBalances() {
             const bal = document.getElementById('tab-balances'); 
-            bal.innerHTML = '<h3 class="text-center text-[10px] font-black uppercase mb-6 italic text-zinc-600 tracking-widest">Balances Mensuales</h3>';
+            bal.innerHTML = '<h3 class="text-center text-[10px] font-black uppercase mb-6 italic text-zinc-600 tracking-widest">Mensual</h3>';
             const m = {}; records.forEach(r => { const k = `${r.year}-${r.month}`; if(!m[k]) m[k] = []; m[k].push(r); });
             Object.keys(m).sort().reverse().forEach(k => {
                 const data = m[k]; const tNet = data.reduce((s, r) => s + (r.base + r.online + r.logros + r.grupo + r.propinasMano - r.gas), 0);

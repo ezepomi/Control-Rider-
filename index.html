@@ -11,9 +11,10 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
+    <!-- Firebase SDK Modular -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
-        import { getAuth, signInWithRedirect, getRedirectResult, GoogleAuthProvider, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
         import { getFirestore, collection, doc, getDocs, addDoc, updateDoc, deleteDoc, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
         const firebaseConfig = {
@@ -30,13 +31,17 @@
         const db = getFirestore(app);
         const APP_ID = 'control-rider-eze';
 
+        // LOGIN POR POPUP (Evita el bucle de redirección en Chrome/Safari)
         window.handleLogin = async () => {
             const provider = new GoogleAuthProvider();
             provider.setCustomParameters({ prompt: 'select_account' });
             try {
                 await setPersistence(auth, browserLocalPersistence);
-                await signInWithRedirect(auth, provider);
-            } catch (err) { alert("Error al conectar con Google."); }
+                await signInWithPopup(auth, provider);
+            } catch (err) { 
+                console.error(err);
+                alert("Error al conectar con Google. Por favor, intentá de nuevo."); 
+            }
         };
 
         window.handleLogout = () => {
@@ -45,24 +50,23 @@
             }
         };
 
-        async function initAuth() {
-            try { await getRedirectResult(auth); } catch (e) { console.error("Redirect Error:", e); }
-            onAuthStateChanged(auth, (u) => {
-                window.user = u;
-                document.getElementById('view-loading').classList.add('hidden');
-                if (u) {
-                    document.getElementById('view-login').classList.add('hidden');
-                    document.getElementById('view-app').classList.remove('hidden');
-                    document.getElementById('display-user').innerText = "Hola, " + u.displayName.split(' ')[0];
-                    window.updateCountdown();
-                    window.fetchData();
-                } else {
-                    document.getElementById('view-login').classList.remove('hidden');
-                    document.getElementById('view-app').classList.add('hidden');
-                }
-            });
-        }
+        // ESCUCHA DE SESIÓN DIRECTA
+        onAuthStateChanged(auth, (u) => {
+            window.user = u;
+            document.getElementById('view-loading').classList.add('hidden');
+            if (u) {
+                document.getElementById('view-login').classList.add('hidden');
+                document.getElementById('view-app').classList.remove('hidden');
+                document.getElementById('display-user').innerText = "Hola, " + u.displayName.split(' ')[0];
+                window.updateCountdown();
+                window.fetchData();
+            } else {
+                document.getElementById('view-login').classList.remove('hidden');
+                document.getElementById('view-app').classList.add('hidden');
+            }
+        });
 
+        // BASE DE DATOS
         window.fetchData = async () => {
             if(!window.user) return;
             const ref = collection(db, 'artifacts', APP_ID, 'users', window.user.uid, 'jornadas');
@@ -82,8 +86,6 @@
             await deleteDoc(doc(db, 'artifacts', APP_ID, 'users', window.user.uid, 'jornadas', id));
             window.fetchData();
         };
-
-        initAuth();
     </script>
     
     <script src="https://cdn.tailwindcss.com"></script>

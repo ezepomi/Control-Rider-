@@ -11,10 +11,12 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
+    <!-- Firebase SDK Compat -->
     <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore-compat.js"></script>
     
+    <!-- UI & Tools -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
@@ -24,25 +26,33 @@
         body { background: #000; color: #fff; font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; overflow-x: hidden; touch-action: pan-y; }
         .card { background: rgba(18, 18, 18, 0.98); border-radius: 24px; padding: 1.5rem; border: 1px solid #222; }
         input { background: #111 !important; border: 1px solid #2a2a2a !important; color: var(--n-cyan) !important; text-align: center; height: 55px; border-radius: 16px; width: 100%; font-weight: 700; font-size: 1.1rem; outline: none; }
-        input:focus { border-color: var(--n-cyan) !important; }
         .btn-main { font-weight: 900; display: flex; align-items: center; justify-content: center; text-transform: uppercase; border-radius: 18px; transition: 0.2s; }
         .btn-main:active { transform: scale(0.96); }
         .tab-btn { padding: 16px 0; font-weight: 900; font-size: 11px; text-transform: uppercase; color: #444; border-bottom: 2px solid transparent; transition: 0.3s; }
         .tab-btn.active { color: var(--n-cyan); border-bottom: 2px solid var(--n-cyan); }
         .hidden { display: none !important; }
-        .tab-content { animation: fadeIn 0.3s ease; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body class="max-w-md mx-auto min-h-screen flex flex-col bg-black">
 
-    <div id="view-login" class="flex-1 flex flex-col items-center justify-center px-10 text-center">
-        <div class="mb-14">
-            <h1 class="font-black text-3xl uppercase tracking-tighter italic">CONTROL FINANCIERO</h1>
-        </div>
-        <button onclick="handleLogin()" class="w-full h-16 btn-main bg-white text-black gap-3 shadow-2xl">Entrar con Google</button>
+    <!-- PANTALLA CARGA -->
+    <div id="view-loading" class="flex-1 flex flex-col items-center justify-center p-10 text-center">
+        <div class="w-12 h-12 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+        <p class="text-[10px] font-black uppercase tracking-widest text-zinc-500">Cargando Sistema...</p>
     </div>
 
+    <!-- VISTA LOGIN -->
+    <div id="view-login" class="hidden flex-1 flex flex-col items-center justify-center px-10 text-center">
+        <div class="mb-14">
+            <h1 class="font-black text-3xl uppercase tracking-tighter italic">CONTROL FINANCIERO</h1>
+            <p class="text-zinc-600 text-[9px] font-black uppercase tracking-[0.3em] mt-2">Acceso Exclusivo</p>
+        </div>
+        <button onclick="handleLogin()" id="btn-login-google" class="w-full h-16 btn-main bg-white text-black gap-3 shadow-2xl">
+            Entrar con Google
+        </button>
+    </div>
+
+    <!-- VISTA APP -->
     <div id="view-app" class="hidden flex-1 flex flex-col">
         <header class="sticky top-0 bg-black/95 backdrop-blur-xl z-50 pt-8 pb-2 px-6 border-b border-zinc-900">
             <div class="flex justify-between items-center mb-6">
@@ -60,12 +70,13 @@
         </header>
 
         <main class="flex-1 pb-44 overflow-x-hidden">
-            <div id="tab-registro" class="tab-content p-6 space-y-6">
+            <div id="tab-registro" class="p-6 space-y-6">
                 <div id="edit-indicator" class="hidden bg-yellow-500/10 border border-yellow-500/30 p-3 rounded-xl text-center">
                     <p class="text-[10px] font-black text-yellow-500 uppercase italic">Modo Edición</p>
                     <button onclick="cancelEdit()" class="text-[9px] text-white underline font-bold">Cancelar</button>
                 </div>
                 <div class="card"><input type="date" id="form-date"></div>
+                
                 <div class="card border-cyan-900/30">
                     <p class="text-[10px] font-black text-cyan-400 uppercase mb-4 text-center tracking-widest italic">Liquidación App</p>
                     <div class="grid grid-cols-2 gap-3 mb-3">
@@ -77,12 +88,17 @@
                         <div><label class="text-[8px] text-zinc-600 block mb-1 uppercase font-bold text-center">Grupo</label><input type="number" inputmode="decimal" id="form-grupo"></div>
                     </div>
                 </div>
+
                 <div class="card border-yellow-900/30">
                     <p class="text-[10px] font-black text-yellow-500 uppercase mb-2 text-center">Adelantos en Efectivo</p>
                     <input type="number" inputmode="decimal" id="form-collected" class="!text-yellow-500" placeholder="Dinero rendido">
                 </div>
+
                 <div class="card border-green-900/30 bg-green-500/[0.02]">
-                    <div class="flex justify-between items-center mb-4"><span class="text-[10px] font-black text-green-500 uppercase">Propinas Mano</span><span id="display-tip-total" class="text-3xl font-black text-green-400">$0</span></div>
+                    <div class="flex justify-between items-center mb-4">
+                        <span class="text-[10px] font-black text-green-500 uppercase">Propinas Mano</span>
+                        <span id="display-tip-total" class="text-3xl font-black text-green-400">$0</span>
+                    </div>
                     <div class="grid grid-cols-3 gap-3 mb-4">
                         <button onclick="addTip(200)" class="h-12 rounded-xl bg-zinc-900 text-green-400 border border-zinc-800 text-[10px] font-black">+$200</button>
                         <button onclick="addTip(500)" class="h-12 rounded-xl bg-zinc-900 text-green-400 border border-zinc-800 text-[10px] font-black">+$500</button>
@@ -94,16 +110,19 @@
                     </div>
                     <div id="tips-log" class="max-h-32 overflow-y-auto space-y-1"></div>
                 </div>
+
                 <div class="card border-red-900/30">
                     <p class="text-[10px] font-black text-red-500 uppercase mb-2 text-center">Gasto Nafta</p>
                     <input type="number" inputmode="decimal" id="form-gas" class="!text-red-500">
                 </div>
             </div>
-            <div id="tab-historial" class="tab-content p-6 hidden space-y-4">
+
+            <div id="tab-historial" class="p-6 hidden space-y-4">
                 <div id="weekly-cut" class="space-y-4"></div>
                 <div id="history-list" class="space-y-4 pb-10"></div>
             </div>
-            <div id="tab-balances" class="tab-content p-6 hidden space-y-4"></div>
+
+            <div id="tab-balances" class="p-6 hidden space-y-4"></div>
         </main>
 
         <div class="fixed bottom-0 left-0 right-0 p-6 bg-black/95 backdrop-blur-2xl border-t border-zinc-900 max-w-md mx-auto z-40 flex gap-4">
@@ -121,17 +140,23 @@
             messagingSenderId: "952661224242",
             appId: "1:952661224242:web:3640495af6d4719c33052b"
         };
+        
         firebase.initializeApp(fbConfig);
-        const auth = firebase.auth(); const db = firebase.firestore(); const APP_ID = 'control-rider-eze';
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+        const APP_ID = 'control-rider-eze';
+        
+        // Forzamos persistencia local para evitar cierres de sesión
+        auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+
         let user = null, records = [], dailyTips = [], editingId = null, currentTab = 'registro';
 
-        // GESTOS SWIPE
-        let touchstartX = 0, touchendX = 0;
-        const tabs = ['registro', 'historial', 'balances'];
-        window.addEventListener('touchstart', e => { touchstartX = e.changedTouches[0].screenX; });
+        // SWIPE GESTURES
+        let touchstartX = 0;
+        window.addEventListener('touchstart', e => touchstartX = e.changedTouches[0].screenX);
         window.addEventListener('touchend', e => { 
-            touchendX = e.changedTouches[0].screenX; 
-            const diff = touchstartX - touchendX;
+            const diff = touchstartX - e.changedTouches[0].screenX;
+            const tabs = ['registro', 'historial', 'balances'];
             const idx = tabs.indexOf(currentTab);
             if (Math.abs(diff) > 80) {
                 if (diff > 0 && idx < 2) changeTab(tabs[idx+1]);
@@ -139,28 +164,43 @@
             }
         });
 
-        // LOGIN REDIRECT (Para evitar bloqueos de pop-ups)
-        function handleLogin() {
+        // LOGIN LOGIC
+        async function handleLogin() {
             const provider = new firebase.auth.GoogleAuthProvider();
-            auth.signInWithRedirect(provider);
+            // Usamos signInWithRedirect para evitar bloqueos en celulares
+            try {
+                await auth.signInWithRedirect(provider);
+            } catch (err) {
+                alert("Error al iniciar Google. Intentá de nuevo.");
+            }
         }
 
-        auth.getRedirectResult().catch(err => console.error("Error Login:", err));
+        // Esta función atrapa el resultado después de que Google te devuelve a la app
+        auth.getRedirectResult().then((result) => {
+            if (result.user) {
+                console.log("Login exitoso tras redirect");
+            }
+        }).catch((error) => {
+            console.error("Error redirect result:", error);
+        });
 
+        // ESCUCHA DE SESION
         auth.onAuthStateChanged(u => {
             user = u;
+            document.getElementById('view-loading').classList.add('hidden');
             if (u) {
                 document.getElementById('view-login').classList.add('hidden');
                 document.getElementById('view-app').classList.remove('hidden');
                 document.getElementById('display-user').innerText = "Hola, " + u.displayName.split(' ')[0];
-                updateCountdown(); fetchData();
+                updateCountdown();
+                fetchData();
             } else {
                 document.getElementById('view-login').classList.remove('hidden');
                 document.getElementById('view-app').classList.add('hidden');
             }
         });
 
-        function handleLogout() { 
+        function handleLogout() {
             if(confirm("¿Cerrar sesión?")) {
                 auth.signOut().then(() => {
                     localStorage.clear();
@@ -169,17 +209,19 @@
             }
         }
 
-        function updateCountdown() {
-            const m = new Date('2026-06-11T00:00:00');
-            const d = Math.ceil((m - new Date()) / (1000 * 60 * 60 * 24));
-            document.getElementById('mundial-countdown').innerText = `Faltan ${d} dias para el mundial 🇦🇷`;
-        }
-
+        // --- SISTEMA ---
         async function fetchData() {
             if(!user) return;
             const snap = await db.collection('artifacts').doc(APP_ID).collection('users').doc(user.uid).collection('jornadas').orderBy('date', 'desc').get();
             records = snap.docs.map(doc => ({id: doc.id, ...doc.data()}));
             renderHistory(); renderBalances();
+        }
+
+        function updateCountdown() {
+            const m = new Date('2026-06-11T00:00:00');
+            const d = Math.ceil((m - new Date()) / 864e5);
+            const el = document.getElementById('mundial-countdown');
+            if(el) el.innerText = `Faltan ${d} dias para el mundial 🇦🇷`;
         }
 
         function addTip(v) { dailyTips.push({id: Date.now(), amount: v, time: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}); updateTipUI(); }
@@ -189,7 +231,7 @@
             document.getElementById('display-tip-total').innerText = `$${total.toLocaleString()}`;
             const list = document.getElementById('tips-log'); list.innerHTML = '';
             [...dailyTips].reverse().forEach(t => {
-                list.innerHTML += `<div class="flex justify-between text-[10px] p-2 bg-white/5 rounded-lg"><span>${t.time} — <b>$${t.amount}</b></span><button onclick="removeTip(${t.id})" class="text-red-500 font-black">X</button></div>`;
+                list.innerHTML += `<div class="flex justify-between text-[10px] p-2 bg-white/5 rounded-lg mb-1"><span>${t.time} — <b>$${t.amount}</b></span><button onclick="removeTip(${t.id})" class="text-red-500 font-black">X</button></div>`;
             });
         }
         function removeTip(id) { dailyTips = dailyTips.filter(t => t.id !== id); updateTipUI(); }
@@ -197,6 +239,8 @@
         async function saveRecord() {
             const date = document.getElementById('form-date').value;
             if(!date) return alert("Elegí una fecha");
+            const btn = document.getElementById('btn-save');
+            btn.disabled = true; btn.innerText = "Guardando...";
             const d = new Date(date + 'T12:00:00');
             const data = {
                 date, month: d.getMonth(), year: d.getFullYear(), week: getWeekNumber(d),
@@ -211,8 +255,11 @@
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             };
             const ref = db.collection('artifacts').doc(APP_ID).collection('users').doc(user.uid).collection('jornadas');
-            if(editingId) await ref.doc(editingId).update(data); else await ref.add(data);
-            alert("¡Listo!"); cancelEdit(); fetchData();
+            try {
+                if(editingId) await ref.doc(editingId).update(data); else await ref.add(data);
+                cancelEdit(); fetchData();
+            } catch (e) { alert("Error al guardar"); }
+            btn.disabled = false; btn.innerText = editingId ? "Actualizar Jornada" : "Guardar Jornada";
         }
 
         function editRecord(id) {
@@ -221,11 +268,11 @@
             ['base','online','logros','grupo','collected','gas'].forEach(k => document.getElementById('form-'+k).value = r[k]);
             dailyTips = r.tipsDetail || []; updateTipUI();
             document.getElementById('edit-indicator').classList.remove('hidden');
-            document.getElementById('btn-save').innerText = "Actualizar";
+            document.getElementById('btn-save').innerText = "Actualizar Jornada";
             changeTab('registro');
         }
 
-        async function deleteRecord(id) { if(confirm("¿Borrar?")) { await db.collection('artifacts').doc(APP_ID).collection('users').doc(user.uid).collection('jornadas').doc(id).delete(); fetchData(); } }
+        async function deleteRecord(id) { if(confirm("¿Borrar jornada?")) { await db.collection('artifacts').doc(APP_ID).collection('users').doc(user.uid).collection('jornadas').doc(id).delete(); fetchData(); } }
         function cancelEdit() { editingId = null; ['base','online','logros','grupo','collected','gas'].forEach(k => document.getElementById('form-'+k).value = ''); dailyTips = []; updateTipUI(); document.getElementById('edit-indicator').classList.add('hidden'); document.getElementById('btn-save').innerText = "Guardar Jornada"; }
         function changeTab(t) { currentTab = t; ['registro','historial','balances'].forEach(v => { document.getElementById('tab-'+v).classList.add('hidden'); document.getElementById('btn-'+v).classList.remove('active'); }); document.getElementById('tab-'+t).classList.remove('hidden'); document.getElementById('btn-'+t).classList.add('active'); window.scrollTo(0,0); }
         function getWeekNumber(d) { d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7)); return Math.ceil((((d - new Date(Date.UTC(d.getUTCFullYear(), 0, 1))) / 864e5) + 1) / 7); }
@@ -240,13 +287,14 @@
             const aCobrar = totApp - totAde;
 
             cut.innerHTML = `
-                <div class="card border border-cyan-500/20 bg-cyan-500/[0.04]">
-                    <div class="flex justify-between items-center mb-4"><span class="text-[9px] font-black text-cyan-400 uppercase italic">Semana ${curW}</span><span class="bg-cyan-500/10 text-cyan-400 text-[7px] px-2 py-1 rounded-lg font-black uppercase">Liquidación</span></div>
+                <div class="card border border-cyan-500/20 bg-cyan-500/[0.04] mb-2">
+                    <div class="flex justify-between items-center mb-4"><span class="text-[9px] font-black text-cyan-400 uppercase italic">Semana ${curW}</span><span class="bg-cyan-500/10 text-cyan-400 text-[7px] px-2 py-1 rounded-lg font-black uppercase">Corte</span></div>
                     <div class="grid grid-cols-2 gap-4">
                         <div class="text-center border-r border-zinc-900"><p class="text-[7px] text-zinc-500 uppercase font-black mb-1 italic">Banco</p><p class="text-xl font-black text-white">$${Math.round(aCobrar).toLocaleString()}</p></div>
-                        <div class="text-center"><p class="text-[7px] text-zinc-500 uppercase font-black mb-1 italic">Adelantos (Efe)</p><p class="text-xl font-black text-yellow-500">$${Math.round(totAde).toLocaleString()}</p></div>
+                        <div class="text-center"><p class="text-[7px] text-zinc-500 uppercase font-black mb-1 italic">Adelantos</p><p class="text-xl font-black text-yellow-500">$${Math.round(totAde).toLocaleString()}</p></div>
                     </div>
-                </div>`;
+                </div>
+                <p class="text-center text-[8px] font-black uppercase text-zinc-700 tracking-widest py-2">Lista de Jornadas</p>`;
 
             const ds = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
             records.forEach(r => {
@@ -268,7 +316,7 @@
 
         function renderBalances() {
             const bal = document.getElementById('tab-balances'); 
-            bal.innerHTML = '<h3 class="text-center text-[10px] font-black uppercase mb-6 italic text-zinc-600 tracking-widest">Mensual</h3>';
+            bal.innerHTML = '<h3 class="text-center text-[10px] font-black uppercase mb-6 italic text-zinc-600 tracking-widest">Balances</h3>';
             const m = {}; records.forEach(r => { const k = `${r.year}-${r.month}`; if(!m[k]) m[k] = []; m[k].push(r); });
             Object.keys(m).sort().reverse().forEach(k => {
                 const data = m[k]; const tNet = data.reduce((s, r) => s + (r.base + r.online + r.logros + r.grupo + r.propinasMano - r.gas), 0);
@@ -281,14 +329,10 @@
 
         function exportExcel() {
             if(!records.length) return alert("Sin datos");
-            const dShort = ["Dom", "Lun", "Mar", "Mie", "Jue", "Vie", "Sab"];
-            const exData = records.map(r => {
-                const totApp = r.base + r.logros + r.grupo + r.online;
-                const dNom = dShort[new Date(r.date + 'T12:00:00').getDay()];
-                return { Día: dNom, Fecha: r.date, Semana: r.week, Base: r.base, Logros: r.logros, Grupo: r.grupo, 'Propina App': r.online, 'Propina Mano': r.propinasMano, 'Adelantos Efe': r.collected, Nafta: r.gas, 'Neto Final': (totApp + r.propinasMano) - r.gas };
-            });
-            const ws = XLSX.utils.json_to_sheet(exData); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Reporte");
-            XLSX.writeFile(wb, `Control_Financiero_${Date.now()}.xlsx`);
+            const ds = ["Dom", "Lun", "Mar", "Mie", "Jue", "Vie", "Sab"];
+            const exData = records.map(r => ({ Día: ds[new Date(r.date + 'T12:00:00').getDay()], Fecha: r.date, Base: r.base, Logros: r.logros, Grupo: r.grupo, Propina_App: r.online, Propina_Mano: r.propinasMano, Adelantos: r.collected, Nafta: r.gas, Neto: (r.base + r.online + r.logros + r.grupo + r.propinasMano) - r.gas }));
+            const ws = XLSX.utils.json_to_sheet(exData); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Datos");
+            XLSX.writeFile(wb, `Planilla_Rider_${Date.now()}.xlsx`);
         }
         window.onload = () => document.getElementById('form-date').value = new Date().toISOString().split('T')[0];
     </script>

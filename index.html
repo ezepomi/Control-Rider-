@@ -11,7 +11,6 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
-    <!-- Firebase SDK Modular (Más estable para móviles) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
         import { getAuth, signInWithRedirect, getRedirectResult, GoogleAuthProvider, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
@@ -31,36 +30,23 @@
         const db = getFirestore(app);
         const APP_ID = 'control-rider-eze';
 
-        // Hacer globales las funciones para que funcionen con los botones HTML
         window.handleLogin = async () => {
             const provider = new GoogleAuthProvider();
             provider.setCustomParameters({ prompt: 'select_account' });
             try {
                 await setPersistence(auth, browserLocalPersistence);
                 await signInWithRedirect(auth, provider);
-            } catch (err) { alert("Error al iniciar Google"); }
+            } catch (err) { alert("Error al conectar con Google."); }
         };
 
         window.handleLogout = () => {
-            if(confirm("¿Cerrar sesión?")) {
-                signOut(auth).then(() => {
-                    localStorage.clear();
-                    location.reload();
-                });
+            if(confirm("¿Cerrar sesión de forma segura?")) {
+                signOut(auth).then(() => { localStorage.clear(); location.reload(); });
             }
         };
 
-        // Guardia de Seguridad: Espera al resultado del redirect y al cambio de estado
-        let authChecked = false;
-        
         async function initAuth() {
-            try {
-                // Primero chequeamos si venimos de un redirect
-                await getRedirectResult(auth);
-            } catch (error) {
-                console.error("Error en redirect result", error);
-            }
-
+            try { await getRedirectResult(auth); } catch (e) { console.error("Redirect Error:", e); }
             onAuthStateChanged(auth, (u) => {
                 window.user = u;
                 document.getElementById('view-loading').classList.add('hidden');
@@ -68,8 +54,8 @@
                     document.getElementById('view-login').classList.add('hidden');
                     document.getElementById('view-app').classList.remove('hidden');
                     document.getElementById('display-user').innerText = "Hola, " + u.displayName.split(' ')[0];
-                    window.fetchData();
                     window.updateCountdown();
+                    window.fetchData();
                 } else {
                     document.getElementById('view-login').classList.remove('hidden');
                     document.getElementById('view-app').classList.add('hidden');
@@ -80,31 +66,23 @@
         window.fetchData = async () => {
             if(!window.user) return;
             const ref = collection(db, 'artifacts', APP_ID, 'users', window.user.uid, 'jornadas');
-            const q = query(ref, orderBy('date', 'desc'));
-            const snap = await getDocs(q);
+            const snap = await getDocs(query(ref, orderBy('date', 'desc')));
             window.records = snap.docs.map(d => ({id: d.id, ...d.data()}));
-            window.renderHistory();
-            window.renderBalances();
+            window.renderHistory(); window.renderBalances();
         };
 
         window.saveToFirebase = async (data, id = null) => {
             const ref = collection(db, 'artifacts', APP_ID, 'users', window.user.uid, 'jornadas');
-            if(id) {
-                const docRef = doc(db, 'artifacts', APP_ID, 'users', window.user.uid, 'jornadas', id);
-                await updateDoc(docRef, {...data, updatedAt: serverTimestamp()});
-            } else {
-                await addDoc(ref, {...data, createdAt: serverTimestamp()});
-            }
+            if(id) await updateDoc(doc(db, 'artifacts', APP_ID, 'users', window.user.uid, 'jornadas', id), {...data, updatedAt: serverTimestamp()});
+            else await addDoc(ref, {...data, createdAt: serverTimestamp()});
             window.fetchData();
         };
 
         window.deleteFromFirebase = async (id) => {
-            const docRef = doc(db, 'artifacts', APP_ID, 'users', window.user.uid, 'jornadas', id);
-            await deleteDoc(docRef);
+            await deleteDoc(doc(db, 'artifacts', APP_ID, 'users', window.user.uid, 'jornadas', id));
             window.fetchData();
         };
 
-        // Iniciar el proceso de auth al cargar
         initAuth();
     </script>
     
@@ -116,7 +94,8 @@
         :root { --n-cyan: #00f3ff; --n-green: #39ff14; --n-red: #ff3131; }
         body { background: #000; color: #fff; font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; overflow-x: hidden; touch-action: pan-y; }
         .card { background: rgba(18, 18, 18, 0.98); border-radius: 24px; padding: 1.5rem; border: 1px solid #222; }
-        input { background: #111 !important; border: 1px solid #2a2a2a !important; color: var(--n-cyan) !important; text-align: center; height: 55px; border-radius: 16px; width: 100%; font-weight: 700; font-size: 1.1rem; outline: none; }
+        input { background: #111 !important; border: 1px solid #2a2a2a !important; color: var(--n-cyan) !important; text-align: center; height: 55px; border-radius: 16px; width: 100%; font-weight: 700; outline: none; font-size: 1.1rem; }
+        input:focus { border-color: var(--n-cyan) !important; }
         .btn-main { font-weight: 900; display: flex; align-items: center; justify-content: center; text-transform: uppercase; border-radius: 18px; transition: 0.2s; }
         .btn-main:active { transform: scale(0.96); }
         .tab-btn { padding: 16px 0; font-weight: 900; font-size: 11px; text-transform: uppercase; color: #444; border-bottom: 2px solid transparent; transition: 0.3s; }
@@ -128,22 +107,16 @@
 </head>
 <body class="max-w-md mx-auto min-h-screen flex flex-col bg-black">
 
-    <!-- PANTALLA CARGA -->
     <div id="view-loading" class="flex-1 flex flex-col items-center justify-center p-10 text-center">
         <div class="loading-spinner mb-4"></div>
-        <p class="text-[9px] font-black uppercase tracking-[0.3em] text-zinc-500">Iniciando Control...</p>
+        <p class="text-[9px] font-black uppercase tracking-[0.3em] text-zinc-500">Iniciando...</p>
     </div>
 
-    <!-- VISTA LOGIN -->
     <div id="view-login" class="hidden flex-1 flex flex-col items-center justify-center px-10 text-center">
-        <div class="mb-14">
-            <h1 class="font-black text-3xl uppercase tracking-tighter italic text-white">CONTROL FINANCIERO</h1>
-        </div>
-        <button onclick="handleLogin()" class="w-full h-16 btn-main bg-white text-black gap-3 shadow-2xl">Entrar con Google</button>
-        <p class="mt-8 text-[8px] text-zinc-600 uppercase font-bold tracking-widest">Usar Chrome o Safari para evitar errores</p>
+        <div class="mb-14"><h1 class="font-black text-3xl uppercase tracking-tighter italic text-white">CONTROL FINANCIERO</h1></div>
+        <button onclick="handleLogin()" class="w-full h-16 btn-main bg-white text-black shadow-2xl">Entrar con Google</button>
     </div>
 
-    <!-- VISTA APP -->
     <div id="view-app" class="hidden flex-1 flex flex-col">
         <header class="sticky top-0 bg-black/95 backdrop-blur-xl z-50 pt-8 pb-2 px-6 border-b border-zinc-900">
             <div class="flex justify-between items-center mb-6">
@@ -161,12 +134,13 @@
         </header>
 
         <main class="flex-1 pb-44 overflow-x-hidden">
-            <!-- REGISTRO -->
+            <!-- PESTAÑA REGISTRO -->
             <div id="tab-registro" class="p-6 space-y-6">
                 <div id="edit-indicator" class="hidden bg-yellow-500/10 border border-yellow-500/30 p-3 rounded-xl text-center">
-                    <p class="text-[10px] font-black text-yellow-500 uppercase italic">Modo Edición</p>
-                    <button onclick="cancelEdit()" class="text-[9px] text-white underline font-bold">Cancelar</button>
+                    <p class="text-[10px] font-black text-yellow-500 uppercase italic">Modo Edición Activado</p>
+                    <button onclick="cancelEdit()" class="text-[9px] text-white underline font-bold">Cancelar Edición</button>
                 </div>
+                
                 <div class="card"><input type="date" id="form-date"></div>
                 
                 <div class="card border-cyan-900/30">
@@ -177,7 +151,7 @@
                     </div>
                     <div class="grid grid-cols-2 gap-3">
                         <div><label class="text-[8px] text-zinc-600 block mb-1 uppercase font-bold text-center">Logros</label><input type="number" inputmode="decimal" id="form-logros" placeholder="0"></div>
-                        <div><label class="text-[8px] text-zinc-600 block mb-1 uppercase font-bold text-center">Grupo</label><input type="number" inputmode="decimal" id="form-grupo" placeholder="0"></div>
+                        <div><label class="text-[8px] text-zinc-600 block mb-1 uppercase font-bold text-center">Bono Grupo</label><input type="number" inputmode="decimal" id="form-grupo" placeholder="0"></div>
                     </div>
                 </div>
 
@@ -187,7 +161,10 @@
                 </div>
 
                 <div class="card border-green-900/30 bg-green-500/[0.02]">
-                    <div class="flex justify-between items-center mb-4"><span class="text-[10px] font-black text-green-500 uppercase">Propinas Mano</span><span id="display-tip-total" class="text-3xl font-black text-green-400">$0</span></div>
+                    <div class="flex justify-between items-center mb-4">
+                        <span class="text-[10px] font-black text-green-500 uppercase">Propinas Mano</span>
+                        <span id="display-tip-total" class="text-3xl font-black text-green-400">$0</span>
+                    </div>
                     <div class="grid grid-cols-3 gap-3 mb-4">
                         <button onclick="addTip(200)" class="h-12 rounded-xl bg-zinc-900 text-green-400 border border-zinc-800 text-[10px] font-black">+$200</button>
                         <button onclick="addTip(500)" class="h-12 rounded-xl bg-zinc-900 text-green-400 border border-zinc-800 text-[10px] font-black">+$500</button>
@@ -206,11 +183,13 @@
                 </div>
             </div>
 
+            <!-- PESTAÑA HISTORIAL -->
             <div id="tab-historial" class="p-6 hidden space-y-4">
                 <div id="weekly-cut"></div>
                 <div id="history-list" class="space-y-4"></div>
             </div>
 
+            <!-- PESTAÑA BALANCES -->
             <div id="tab-balances" class="p-6 hidden space-y-4"></div>
         </main>
 
@@ -221,10 +200,9 @@
     </div>
 
     <script>
-        // Variables globales no-firebase
         window.records = []; window.dailyTips = []; window.editingId = null; window.currentTab = 'registro';
 
-        // GESTOS SWIPE
+        // SWIPE
         let touchstartX = 0;
         window.addEventListener('touchstart', e => touchstartX = e.changedTouches[0].screenX);
         window.addEventListener('touchend', e => { 
@@ -232,36 +210,35 @@
             const tabs = ['registro', 'historial', 'balances'];
             const idx = tabs.indexOf(window.currentTab);
             if (Math.abs(diff) > 80) {
-                if (diff > 0 && idx < 2) changeTab(tabs[idx+1]);
-                if (diff < 0 && idx > 0) changeTab(tabs[idx-1]);
+                if (diff > 0 && idx < 2) window.changeTab(tabs[idx+1]);
+                if (diff < 0 && idx > 0) window.changeTab(tabs[idx-1]);
             }
         });
 
         window.updateCountdown = () => {
             const m = new Date('2026-06-11T00:00:00');
             const d = Math.ceil((m - new Date()) / 864e5);
-            document.getElementById('mundial-countdown').innerText = `Faltan ${d} dias para el mundial 🇦🇷`;
+            document.getElementById('mundial-countdown').innerText = `FALTAN ${d} DIAS PARA EL MUNDIAL 🇦🇷`;
         };
 
-        window.addTip = (v) => { window.dailyTips.push({id: Date.now(), amount: v, time: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}); updateTipUI(); };
-        window.addManualTip = () => { const el = document.getElementById('form-tip-manual'); const v = parseFloat(el.value); if(v > 0) { addTip(v); el.value = ''; } };
+        window.addTip = (v) => { window.dailyTips.push({id: Date.now(), amount: v, time: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}); window.updateTipUI(); };
+        window.addManualTip = () => { const el = document.getElementById('form-tip-manual'); const v = parseFloat(el.value); if(v > 0) { window.addTip(v); el.value = ''; } };
         window.updateTipUI = () => {
-            const total = window.dailyTips.reduce((s, c) => s + c.amount, 0);
-            document.getElementById('display-tip-total').innerText = `$${total.toLocaleString()}`;
+            document.getElementById('display-tip-total').innerText = `$${window.dailyTips.reduce((s, c) => s + c.amount, 0).toLocaleString()}`;
             const list = document.getElementById('tips-log'); list.innerHTML = '';
             [...window.dailyTips].reverse().forEach(t => {
-                list.innerHTML += `<div class="flex justify-between text-[10px] p-2 bg-white/5 rounded-lg mb-1"><span>${t.time} — <b>$${t.amount}</b></span><button onclick="removeTip(${t.id})" class="text-red-500 font-black">X</button></div>`;
+                list.innerHTML += `<div class="flex justify-between items-center text-[10px] p-2 bg-white/5 rounded-lg mb-1"><span>${t.time} — <b>$${t.amount}</b></span><button onclick="removeTip(${t.id})" class="text-red-500 font-black">X</button></div>`;
             });
         };
-        window.removeTip = (id) => { window.dailyTips = window.dailyTips.filter(t => t.id !== id); updateTipUI(); };
+        window.removeTip = (id) => { window.dailyTips = window.dailyTips.filter(t => t.id !== id); window.updateTipUI(); };
 
         window.saveRecord = async () => {
             const date = document.getElementById('form-date').value;
             if(!date) return alert("Elegí una fecha");
-            const btn = document.getElementById('btn-save'); btn.disabled = true;
+            const btn = document.getElementById('btn-save'); btn.disabled = true; btn.innerText = "Guardando...";
             const d = new Date(date + 'T12:00:00');
             const data = {
-                date, month: d.getMonth(), year: d.getFullYear(), week: getWeekNumber(d),
+                date, month: d.getMonth(), year: d.getFullYear(), week: window.getWeekNumber(d),
                 base: parseFloat(document.getElementById('form-base').value) || 0,
                 online: parseFloat(document.getElementById('form-online').value) || 0,
                 logros: parseFloat(document.getElementById('form-logros').value) || 0,
@@ -271,80 +248,101 @@
                 propinasMano: window.dailyTips.reduce((s, c) => s + c.amount, 0),
                 tipsDetail: window.dailyTips
             };
-            try {
-                await window.saveToFirebase(data, window.editingId);
-                cancelEdit();
-            } catch (e) { alert("Error al guardar"); }
-            btn.disabled = false;
+            try { await window.saveToFirebase(data, window.editingId); window.cancelEdit(); } 
+            catch (e) { alert("Error al guardar"); }
+            btn.disabled = false; btn.innerText = "Guardar Jornada";
         };
 
         window.editRecord = (id) => {
             const r = window.records.find(x => x.id === id); if(!r) return;
             window.editingId = id; document.getElementById('form-date').value = r.date;
-            ['base','online','logros','grupo','collected','gas'].forEach(k => document.getElementById('form-'+k).value = r[k]);
-            window.dailyTips = r.tipsDetail || []; updateTipUI();
+            ['base','online','logros','grupo','collected','gas'].forEach(k => document.getElementById('form-'+k).value = r[k] || '');
+            window.dailyTips = r.tipsDetail || []; window.updateTipUI();
             document.getElementById('edit-indicator').classList.remove('hidden');
             document.getElementById('btn-save').innerText = "Actualizar Jornada";
-            changeTab('registro');
+            window.changeTab('registro');
         };
 
-        window.deleteRecord = async (id) => { if(confirm("¿Borrar?")) { await window.deleteFromFirebase(id); } };
-        window.cancelEdit = () => { window.editingId = null; ['base','online','logros','grupo','collected','gas'].forEach(k => document.getElementById('form-'+k).value = ''); window.dailyTips = []; updateTipUI(); document.getElementById('edit-indicator').classList.add('hidden'); document.getElementById('btn-save').innerText = "Guardar Jornada"; };
+        window.deleteRecord = async (id) => { if(confirm("¿Borrar jornada permanentemente?")) await window.deleteFromFirebase(id); };
+        window.cancelEdit = () => { window.editingId = null; ['base','online','logros','grupo','collected','gas'].forEach(k => document.getElementById('form-'+k).value = ''); window.dailyTips = []; window.updateTipUI(); document.getElementById('edit-indicator').classList.add('hidden'); document.getElementById('btn-save').innerText = "Guardar Jornada"; };
         window.changeTab = (t) => { window.currentTab = t; ['registro','historial','balances'].forEach(v => { document.getElementById('tab-'+v).classList.add('hidden'); document.getElementById('btn-'+v).classList.remove('active'); }); document.getElementById('tab-'+t).classList.remove('hidden'); document.getElementById('btn-'+t).classList.add('active'); window.scrollTo(0,0); };
         window.getWeekNumber = (d) => { d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7)); return Math.ceil((((d - new Date(Date.UTC(d.getUTCFullYear(), 0, 1))) / 864e5) + 1) / 7); };
 
         window.renderHistory = () => {
             const list = document.getElementById('history-list'); list.innerHTML = '';
             const cut = document.getElementById('weekly-cut'); cut.innerHTML = '';
-            const now = new Date(); const curW = getWeekNumber(now); const curY = now.getFullYear();
+            const now = new Date(); const curW = window.getWeekNumber(now); const curY = now.getFullYear();
             const weekRecs = window.records.filter(r => r.week === curW && r.year === curY);
+            
             const totApp = weekRecs.reduce((s, r) => s + r.base + r.online + r.logros + r.grupo, 0);
             const totAde = weekRecs.reduce((s, r) => s + r.collected, 0);
             const aCobrar = totApp - totAde;
 
-            cut.innerHTML = `<div class="card border border-cyan-500/20 bg-cyan-500/[0.04] mb-6">
-                <div class="flex justify-between items-center mb-4"><span class="text-[9px] font-black text-cyan-400 uppercase italic">Corte Semana ${curW}</span><span class="bg-cyan-500/10 text-cyan-400 text-[7px] px-2 py-1 rounded-lg font-black uppercase">Corte</span></div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="text-center border-r border-zinc-900"><p class="text-[7px] text-zinc-500 uppercase font-black mb-1 italic">Banco</p><p class="text-xl font-black text-white">$${Math.round(aCobrar).toLocaleString()}</p></div>
-                    <div class="text-center"><p class="text-[7px] text-zinc-500 uppercase font-black mb-1 italic">Adelantos</p><p class="text-xl font-black text-yellow-500">$${Math.round(totAde).toLocaleString()}</p></div>
-                </div>
-            </div>`;
-
-            const ds = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
-            window.records.forEach(r => {
-                const net = (r.base + r.online + r.logros + r.grupo + r.propinasMano) - r.gas;
-                const nomD = ds[new Date(r.date + 'T12:00:00').getDay()];
-                list.innerHTML += `<div class="card border-l-4 border-cyan-500 mb-3 bg-zinc-950/40">
-                    <div class="flex justify-between items-start">
-                        <div><p class="text-[8px] text-zinc-600 font-black uppercase">${nomD} ${r.date.split('-').reverse().slice(0,2).join('/')}</p><p class="text-xl font-black">$${Math.round(net).toLocaleString()} <span class="text-[9px] text-zinc-700 italic">NETO</span></p></div>
-                        <div class="flex gap-2">
-                            <button onclick="editRecord('${r.id}')" class="bg-zinc-900 px-3 py-2 rounded-xl text-cyan-400 text-[9px] font-black">Edit</button>
-                            <button onclick="deleteRecord('${r.id}')" class="bg-zinc-900 px-3 py-2 rounded-xl text-red-500 text-[9px] font-black">X</button>
-                        </div>
+            cut.innerHTML = `
+                <div class="card border border-cyan-500/20 bg-cyan-500/[0.04] mb-6">
+                    <div class="flex justify-between items-center mb-4"><span class="text-[9px] font-black text-cyan-400 uppercase italic">Corte Semana ${curW}</span><span class="bg-cyan-500/10 text-cyan-400 text-[7px] px-2 py-1 rounded-lg font-black uppercase">Liquidación</span></div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="text-center border-r border-zinc-900"><p class="text-[7px] text-zinc-500 uppercase font-black mb-1 italic">Cobro Banco</p><p class="text-xl font-black text-white">$${Math.round(aCobrar).toLocaleString()}</p></div>
+                        <div class="text-center"><p class="text-[7px] text-zinc-500 uppercase font-black mb-1 italic">Adelantos</p><p class="text-xl font-black text-yellow-500">$${Math.round(totAde).toLocaleString()}</p></div>
                     </div>
                 </div>`;
+
+            const dias = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+            window.records.forEach(r => {
+                const net = (r.base + r.online + r.logros + r.grupo + r.propinasMano) - r.gas;
+                const nomD = dias[new Date(r.date + 'T12:00:00').getDay()];
+                list.innerHTML += `
+                    <div class="card border-l-4 border-cyan-500 mb-3 bg-zinc-950/40">
+                        <div class="flex justify-between items-start">
+                            <div><p class="text-[8px] text-zinc-600 font-black uppercase">${nomD} ${r.date.split('-').reverse().slice(0,2).join('/')}</p><p class="text-xl font-black">$${Math.round(net).toLocaleString()} <span class="text-[9px] text-zinc-700 italic">NETO</span></p></div>
+                            <div class="flex gap-2">
+                                <button onclick="editRecord('${r.id}')" class="bg-zinc-900 px-3 py-2 rounded-xl text-cyan-400 text-[9px] font-black uppercase">Edit</button>
+                                <button onclick="deleteRecord('${r.id}')" class="bg-zinc-900 px-3 py-2 rounded-xl text-red-500 text-[9px] font-black uppercase">X</button>
+                            </div>
+                        </div>
+                    </div>`;
             });
         };
 
         window.renderBalances = () => {
-            const bal = document.getElementById('tab-balances'); bal.innerHTML = '<h3 class="text-center text-[10px] font-black uppercase mb-6 italic text-zinc-600 tracking-widest">Balances Mensuales</h3>';
+            const bal = document.getElementById('tab-balances'); 
+            bal.innerHTML = '<h3 class="text-center text-[10px] font-black uppercase mb-6 italic text-zinc-600 tracking-widest">Balances Mensuales</h3>';
             const m = {}; window.records.forEach(r => { const k = `${r.year}-${r.month}`; if(!m[k]) m[k] = []; m[k].push(r); });
             Object.keys(m).sort().reverse().forEach(k => {
                 const data = m[k]; const tNet = data.reduce((s, r) => s + (r.base + r.online + r.logros + r.grupo + r.propinasMano - r.gas), 0);
                 let wkH = ''; const w = {}; data.forEach(r => { if(!w[r.week]) w[r.week] = 0; w[r.week] += (r.base + r.online + r.logros + r.grupo + r.propinasMano - r.gas); });
-                Object.keys(w).sort().reverse().forEach(wk => wkH += `<div class="flex justify-between py-3 border-b border-white/5 text-[10px]"><span>Semana ${wk}</span><span class="text-cyan-400 font-bold">$${Math.round(w[wk]).toLocaleString()}</span></div>`);
+                Object.keys(w).sort().reverse().forEach(wk => { wkH += `<div class="flex justify-between py-3 border-b border-white/5 text-[10px]"><span>Semana ${wk}</span><span class="text-cyan-400 font-bold">$${Math.round(w[wk]).toLocaleString()}</span></div>`; });
                 const mesNom = new Date(data[0].date + 'T12:00:00').toLocaleString('es', {month:'long', year:'numeric'}).toUpperCase();
                 bal.innerHTML += `<div class="card" onclick="this.querySelector('.weeks').classList.toggle('hidden')"><div class="flex justify-between items-center"><b>${mesNom}</b><b class="text-green-400">$${Math.round(tNet).toLocaleString()}</b></div><div class="weeks hidden mt-4 border-t border-white/5 pt-2">${wkH}</div></div>`;
             });
         };
 
         window.exportExcel = () => {
-            if(!window.records.length) return alert("Sin datos");
-            const data = window.records.map(r => ({ Fecha: r.date, Neto: (r.base + r.online + r.logros + r.grupo + r.propinasMano) - r.gas }));
-            const ws = XLSX.utils.json_to_sheet(data); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Reporte");
-            XLSX.writeFile(wb, `Control_${Date.now()}.xlsx`);
+            if(!window.records.length) return alert("No hay datos para exportar");
+            const dias = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+            const exData = window.records.map(r => {
+                const totAppBruto = r.base + r.logros + r.grupo + r.online;
+                return { 
+                    'Día': dias[new Date(r.date + 'T12:00:00').getDay()], 
+                    'Fecha': r.date, 
+                    'Semana': r.week, 
+                    'Base': r.base, 
+                    'Logros': r.logros, 
+                    'Bono Grupo': r.grupo, 
+                    'Propinas App': r.online, 
+                    'Propinas Mano': r.propinasMano, 
+                    'Total App Bruto': totAppBruto,
+                    'Adelantos Efectivo': r.collected, 
+                    'A Cobrar Banco': totAppBruto - r.collected,
+                    'Gasto Nafta': r.gas, 
+                    'Ganancia Limpia': (totAppBruto + r.propinasMano) - r.gas 
+                };
+            });
+            const ws = XLSX.utils.json_to_sheet(exData); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Contabilidad");
+            XLSX.writeFile(wb, `Control_Rider_${Date.now()}.xlsx`);
         };
-        window.onload = () => { document.getElementById('form-date').value = new Date().toISOString().split('T')[0]; };
+
+        window.onload = () => document.getElementById('form-date').value = new Date().toISOString().split('T')[0];
     </script>
 </body>
 </html>

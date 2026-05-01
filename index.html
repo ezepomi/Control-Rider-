@@ -1,0 +1,244 @@
+```html
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Control Financiero Rider | Cloud Edition</title>
+    
+    <!-- Firebase SDK (Compatibilidad para archivo único) -->
+    <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore-compat.js"></script>
+    
+    <!-- UI & Excel -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <style>
+        :root { --n-cyan: #00f3ff; --n-green: #39ff14; --n-red: #ff3131; --n-yellow: #f3ff00; }
+        body { background: #000; color: #fff; font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
+        .card { background: rgba(18, 18, 18, 0.98); border-radius: 20px; padding: 1.25rem; border: 1px solid #222; }
+        input { background: #111 !important; border: 1px solid #2a2a2a !important; color: var(--n-cyan) !important; text-align: center; height: 56px; border-radius: 12px; width: 100%; font-weight: 600; outline: none; }
+        .btn-main { height: 60px; font-weight: 800; display: flex; align-items: center; justify-content: center; text-transform: uppercase; transition: 0.2s; }
+        .btn-main:active { transform: scale(0.95); }
+        .tab-btn { padding: 14px 0; font-weight: 800; font-size: 10px; text-transform: uppercase; color: #444; border-bottom: 2px solid transparent; }
+        .tab-btn.active { color: var(--n-cyan); border-bottom: 2px solid var(--n-cyan); }
+        .tip-item { background: rgba(255,255,255,0.03); border: 1px solid #222; border-radius: 10px; padding: 10px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body class="max-w-md mx-auto min-h-screen flex flex-col">
+
+    <!-- LOGIN -->
+    <div id="view-login" class="flex-1 flex flex-col items-center justify-center px-10 text-center">
+        <h1 class="font-black text-2xl uppercase mb-2">Centro de Control</h1>
+        <p class="text-zinc-500 text-[10px] uppercase tracking-widest font-bold mb-12">Finanzas Rider Cloud</p>
+        <button onclick="handleLogin()" class="w-full btn-main bg-white text-black rounded-2xl gap-3 shadow-2xl">
+            <svg class="w-6 h-6" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+            Entrar con Google
+        </button>
+    </div>
+
+    <!-- APP -->
+    <div id="view-app" class="hidden flex-1 flex flex-col">
+        <header class="sticky top-0 bg-black/95 backdrop-blur-xl z-50 pt-8 pb-2 px-4 border-b border-zinc-900">
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h2 id="user-display" class="font-black text-sm uppercase">Usuario</h2>
+                    <p class="text-[9px] text-zinc-600 font-bold uppercase tracking-widest">Sincronizado</p>
+                </div>
+                <button onclick="handleLogout()" class="text-[9px] font-black text-zinc-500 uppercase border border-zinc-800 px-4 py-2 rounded-xl">Salir</button>
+            </div>
+            <nav class="flex">
+                <button onclick="showTab('registro')" id="btn-registro" class="tab-btn flex-1 active">Registro</button>
+                <button onclick="showTab('historial')" id="btn-historial" class="tab-btn flex-1">Historial</button>
+                <button onclick="showTab('balances')" id="btn-balances" class="tab-btn flex-1">Balances</button>
+            </nav>
+        </header>
+
+        <main class="flex-1 pb-32">
+            <div id="tab-registro" class="p-4 space-y-6">
+                <div class="card">
+                    <label class="block text-[9px] font-black uppercase text-zinc-500 mb-2 text-center">Fecha del Turno</label>
+                    <input type="date" id="f-date">
+                </div>
+
+                <div class="card border-cyan-900/30">
+                    <p class="text-[9px] font-black text-cyan-400 uppercase mb-4 text-center">Datos App</p>
+                    <div class="grid grid-cols-2 gap-3 mb-3">
+                        <input type="number" id="f-base" placeholder="Base ($)">
+                        <input type="number" id="f-online" placeholder="Tips App ($)">
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <input type="number" id="f-logros" placeholder="Logros ($)">
+                        <input type="number" id="f-grupo" placeholder="Grupo ($)">
+                    </div>
+                </div>
+
+                <div class="card border-yellow-900/30">
+                    <p class="text-[9px] font-black text-yellow-500 uppercase mb-2 text-center">Cobros Efectivo</p>
+                    <input type="number" id="f-collected" placeholder="Dinero rendido" class="!text-yellow-500">
+                </div>
+
+                <div class="card border-green-900/30 bg-green-500/[0.02]">
+                    <div class="flex justify-between items-center mb-4">
+                        <span class="text-[9px] font-black text-green-500 uppercase">Tips en Mano</span>
+                        <span id="f-tip-total" class="text-2xl font-black text-green-400">$0</span>
+                    </div>
+                    <div class="grid grid-cols-3 gap-2 mb-4">
+                        <button onclick="addT(200)" class="h-12 rounded-xl bg-zinc-900 text-green-400 border border-zinc-800 text-xs font-bold">+$200</button>
+                        <button onclick="addT(500)" class="h-12 rounded-xl bg-zinc-900 text-green-400 border border-zinc-800 text-xs font-bold">+$500</button>
+                        <button onclick="addT(1000)" class="h-12 rounded-xl bg-zinc-900 text-green-400 border border-zinc-800 text-xs font-bold">+$1k</button>
+                    </div>
+                    <div id="tips-log" class="max-h-40 overflow-y-auto space-y-2"></div>
+                </div>
+
+                <div class="card border-red-900/30">
+                    <p class="text-[9px] font-black text-red-500 uppercase mb-2 text-center">Nafta</p>
+                    <input type="number" id="f-gas" placeholder="0" class="!text-red-500">
+                </div>
+
+                <button onclick="saveRec()" id="btn-save" class="w-full btn-main bg-white text-black rounded-2xl shadow-2xl h-[75px]">Guardar Jornada</button>
+            </div>
+            <div id="tab-historial" class="p-4 hidden space-y-4"></div>
+            <div id="tab-balances" class="p-4 hidden space-y-6"></div>
+        </main>
+
+        <div id="action-bar" class="fixed bottom-0 left-0 right-0 p-5 bg-black/95 border-t border-zinc-900 max-w-md mx-auto z-40 flex gap-3">
+            <button onclick="expEx()" class="flex-[2] h-14 rounded-2xl bg-green-600 text-[10px] font-black uppercase">Exportar Excel</button>
+            <button onclick="clrData()" class="flex-1 h-14 rounded-2xl border border-red-900/30 text-[10px] font-black text-red-500 uppercase tracking-tighter">Limpiar</button>
+        </div>
+    </div>
+
+    <script>
+        // CONFIGURACIÓN DE EZE
+        const firebaseConfig = {
+            apiKey: "AIzaSyDGUD-PIo2zFBkiFqfkN0Fpaqqp5_jNInw",
+            authDomain: "control-financiero-rider.firebaseapp.com",
+            projectId: "control-financiero-rider",
+            storageBucket: "control-financiero-rider.firebasestorage.app",
+            messagingSenderId: "952661224242",
+            appId: "1:952661224242:web:3640495af6d4719c33052b"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+        const APP_ID = 'control-rider-eze';
+
+        let user = null;
+        let records = [];
+        let curTips = [];
+
+        auth.onAuthStateChanged(u => {
+            user = u;
+            if (u) {
+                document.getElementById('view-login').classList.add('hidden');
+                document.getElementById('view-app').classList.remove('hidden');
+                document.getElementById('user-display').innerText = "Hola, " + u.displayName.split(' ')[0];
+                fetchData();
+            } else {
+                document.getElementById('view-login').classList.remove('hidden');
+                document.getElementById('view-app').classList.add('hidden');
+            }
+        });
+
+        function handleLogin() { auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); }
+        function handleLogout() { if(confirm("¿Cerrar sesión?")) auth.signOut(); }
+
+        function addT(amt) {
+            curTips.push({ id: Date.now(), amount: amt, time: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) });
+            renderTips();
+        }
+        function renderTips() {
+            const list = document.getElementById('tips-log');
+            list.innerHTML = '';
+            let total = 0;
+            [...curTips].reverse().forEach(t => {
+                total += t.amount;
+                const d = document.createElement('div');
+                d.className = "tip-item";
+                d.innerHTML = `<span class="text-[10px] font-bold text-zinc-500">${t.time} — <b class="text-green-400">$${t.amount}</b></span><button onclick="rmT(${t.id})" class="text-[10px] text-red-500 font-black">✕</button>`;
+                list.appendChild(d);
+            });
+            document.getElementById('f-tip-total').innerText = `$${total.toLocaleString()}`;
+        }
+        function rmT(id) { curTips = curTips.filter(x => x.id !== id); renderTips(); }
+
+        async function fetchData() {
+            if(!user) return;
+            const ref = db.collection('artifacts').doc(APP_ID).collection('users').doc(user.uid).collection('jornadas');
+            const snap = await ref.orderBy('date', 'desc').get();
+            records = snap.docs.map(doc => ({id: doc.id, ...doc.data()}));
+            renderH(); renderB();
+        }
+
+        async function saveRec() {
+            const date = document.getElementById('f-date').value;
+            if(!date) return alert("Elegí una fecha");
+            const btn = document.getElementById('btn-save');
+            btn.disabled = true; btn.innerText = "GUARDANDO...";
+            const d = new Date(date + 'T12:00:00');
+            const data = {
+                date, month: d.getMonth(), year: d.getFullYear(), week: getW(d),
+                base: parseFloat(document.getElementById('f-base').value) || 0,
+                online: parseFloat(document.getElementById('f-online').value) || 0,
+                logros: parseFloat(document.getElementById('f-logros').value) || 0,
+                grupo: parseFloat(document.getElementById('f-grupo').value) || 0,
+                collected: parseFloat(document.getElementById('f-collected').value) || 0,
+                gas: parseFloat(document.getElementById('f-gas').value) || 0,
+                tips: curTips.reduce((s, c) => s + c.amount, 0),
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+            try {
+                const ref = db.collection('artifacts').doc(APP_ID).collection('users').doc(user.uid).collection('jornadas');
+                await ref.add(data);
+                ['base','online','logros','grupo','collected','gas'].forEach(k => document.getElementById('f-'+k).value = '');
+                curTips = []; renderTips(); fetchData();
+                alert("Jornada guardada.");
+            } catch (e) { alert("Error"); }
+            finally { btn.disabled = false; btn.innerText = "GUARDAR JORNADA"; }
+        }
+
+        function showTab(t) {
+            ['registro','historial','balances'].forEach(v => { document.getElementById('tab-'+v).classList.add('hidden'); document.getElementById('btn-'+v).classList.remove('active'); });
+            document.getElementById('tab-'+t).classList.remove('hidden');
+            document.getElementById('btn-'+t).classList.add('active');
+            window.scrollTo(0,0);
+        }
+
+        function renderH() {
+            const c = document.getElementById('tab-historial');
+            c.innerHTML = '<h3 class="text-[10px] uppercase my-4 text-center text-zinc-700 font-black">Historial</h3>';
+            records.forEach(r => {
+                const app = r.base + r.online + r.logros + r.grupo;
+                const dep = app - r.collected;
+                const net = (app + r.tips) - r.gas - (app + r.tips)*0.10;
+                c.innerHTML += `<div class="card border-l-4 border-cyan-500 mb-3 flex justify-between items-center bg-zinc-950/40"><div><p class="text-[8px] text-zinc-600 font-black">${r.date}</p><p class="text-xl font-black">$${Math.round(net).toLocaleString()} <span class="text-[8px] text-zinc-700">NETO</span></p><p class="text-[9px] font-bold ${dep >= 0 ? 'text-cyan-500' : 'text-orange-500'}">🏦 $${Math.round(dep).toLocaleString()}</p></div><div class="text-right"><div class="text-[10px] text-green-500 font-black">$${r.tips}</div><p class="text-[8px] text-zinc-700 font-bold">EFECTIVO</p></div></div>`;
+            });
+        }
+
+        function renderB() {
+            const c = document.getElementById('tab-balances');
+            c.innerHTML = '<h3 class="text-[10px] uppercase my-4 text-center text-zinc-700 font-black">Balances</h3>';
+            const m = {}; records.forEach(r => { const k = `${r.year}-${r.month}`; if(!m[k]) m[k] = []; m[k].push(r); });
+            Object.keys(m).sort().reverse().forEach(k => {
+                const data = m[k];
+                const d = new Date(data[0].date + 'T12:00:00');
+                const tApp = data.reduce((s, c) => s + c.base + c.logros + c.grupo, 0);
+                const tTips = data.reduce((s, c) => s + c.online, 0);
+                c.innerHTML += `<div class="card mb-6"><p class="text-[10px] font-black text-cyan-400 uppercase mb-4 border-b border-zinc-900 pb-2">${d.toLocaleString('es',{month:'long',year:'numeric'}).toUpperCase()}</p><div class="grid grid-cols-2 gap-3"><div class="bg-zinc-900 p-3 rounded-2xl"><p class="text-[8px] text-zinc-600 font-black">APP</p><p class="text-base font-black text-white">$${Math.round(tApp).toLocaleString()}</p></div><div class="bg-zinc-900 p-3 rounded-2xl"><p class="text-[8px] text-zinc-600 font-black">TIPS ON</p><p class="text-base font-black text-green-400">$${Math.round(tTips).toLocaleString()}</p></div></div></div>`;
+            });
+        }
+
+        function getW(d) { d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7)); return Math.ceil((((d - new Date(Date.UTC(d.getUTCFullYear(), 0, 1))) / 86400000) + 1) / 7); }
+        function expEx() { if(records.length === 0) return; const wb = XLSX.utils.book_new(); const ws = XLSX.utils.json_to_sheet(records); XLSX.utils.book_append_sheet(wb, ws, "Mis Registros"); XLSX.writeFile(wb, `Planilla_Rider_${Date.now()}.xlsx`); }
+        async function clrData() { if(confirm("¿Borrar todo?")) { const ref = db.collection('artifacts').doc(APP_ID).collection('users').doc(user.uid).collection('jornadas'); const snap = await ref.get(); const b = db.batch(); snap.forEach(doc => b.delete(doc.ref)); await b.commit(); fetchData(); } }
+        window.onload = () => { document.getElementById('f-date').value = new Date().toISOString().split('T')[0]; renderTips(); };
+    </script>
+</body>
+</html>
+
+```

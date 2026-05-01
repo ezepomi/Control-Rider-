@@ -31,25 +31,27 @@
         .tab-btn { padding: 16px 0; font-weight: 900; font-size: 11px; text-transform: uppercase; color: #444; border-bottom: 2px solid transparent; transition: 0.3s; }
         .tab-btn.active { color: var(--n-cyan); border-bottom: 2px solid var(--n-cyan); }
         .hidden { display: none !important; }
+        .loading-spinner { border: 3px solid rgba(0, 243, 255, 0.1); border-top: 3px solid var(--n-cyan); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body class="max-w-md mx-auto min-h-screen flex flex-col bg-black">
 
-    <!-- PANTALLA CARGA -->
+    <!-- PANTALLA CARGA (Se muestra por defecto) -->
     <div id="view-loading" class="flex-1 flex flex-col items-center justify-center p-10 text-center">
-        <div class="w-12 h-12 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-        <p class="text-[10px] font-black uppercase tracking-widest text-zinc-500">Cargando Sistema...</p>
+        <div class="loading-spinner mb-4"></div>
+        <p class="text-[9px] font-black uppercase tracking-[0.3em] text-zinc-500">Iniciando Control...</p>
     </div>
 
     <!-- VISTA LOGIN -->
     <div id="view-login" class="hidden flex-1 flex flex-col items-center justify-center px-10 text-center">
         <div class="mb-14">
-            <h1 class="font-black text-3xl uppercase tracking-tighter italic">CONTROL FINANCIERO</h1>
-            <p class="text-zinc-600 text-[9px] font-black uppercase tracking-[0.3em] mt-2">Acceso Exclusivo</p>
+            <h1 class="font-black text-3xl uppercase tracking-tighter italic text-white">CONTROL FINANCIERO</h1>
         </div>
         <button onclick="handleLogin()" id="btn-login-google" class="w-full h-16 btn-main bg-white text-black gap-3 shadow-2xl">
             Entrar con Google
         </button>
+        <p class="mt-8 text-[8px] text-zinc-600 uppercase font-bold tracking-widest">Usar Chrome o Safari para evitar errores</p>
     </div>
 
     <!-- VISTA APP -->
@@ -70,6 +72,7 @@
         </header>
 
         <main class="flex-1 pb-44 overflow-x-hidden">
+            <!-- REGISTRO -->
             <div id="tab-registro" class="p-6 space-y-6">
                 <div id="edit-indicator" class="hidden bg-yellow-500/10 border border-yellow-500/30 p-3 rounded-xl text-center">
                     <p class="text-[10px] font-black text-yellow-500 uppercase italic">Modo Edición</p>
@@ -80,12 +83,12 @@
                 <div class="card border-cyan-900/30">
                     <p class="text-[10px] font-black text-cyan-400 uppercase mb-4 text-center tracking-widest italic">Liquidación App</p>
                     <div class="grid grid-cols-2 gap-3 mb-3">
-                        <div><label class="text-[8px] text-zinc-600 block mb-1 uppercase font-bold text-center">Base</label><input type="number" inputmode="decimal" id="form-base"></div>
-                        <div><label class="text-[8px] text-zinc-600 block mb-1 uppercase font-bold text-center">Propinas App</label><input type="number" inputmode="decimal" id="form-online"></div>
+                        <div><label class="text-[8px] text-zinc-600 block mb-1 uppercase font-bold text-center">Base</label><input type="number" inputmode="decimal" id="form-base" placeholder="0"></div>
+                        <div><label class="text-[8px] text-zinc-600 block mb-1 uppercase font-bold text-center">Propinas App</label><input type="number" inputmode="decimal" id="form-online" placeholder="0"></div>
                     </div>
                     <div class="grid grid-cols-2 gap-3">
-                        <div><label class="text-[8px] text-zinc-600 block mb-1 uppercase font-bold text-center">Logros</label><input type="number" inputmode="decimal" id="form-logros"></div>
-                        <div><label class="text-[8px] text-zinc-600 block mb-1 uppercase font-bold text-center">Grupo</label><input type="number" inputmode="decimal" id="form-grupo"></div>
+                        <div><label class="text-[8px] text-zinc-600 block mb-1 uppercase font-bold text-center">Logros</label><input type="number" inputmode="decimal" id="form-logros" placeholder="0"></div>
+                        <div><label class="text-[8px] text-zinc-600 block mb-1 uppercase font-bold text-center">Grupo</label><input type="number" inputmode="decimal" id="form-grupo" placeholder="0"></div>
                     </div>
                 </div>
 
@@ -95,10 +98,7 @@
                 </div>
 
                 <div class="card border-green-900/30 bg-green-500/[0.02]">
-                    <div class="flex justify-between items-center mb-4">
-                        <span class="text-[10px] font-black text-green-500 uppercase">Propinas Mano</span>
-                        <span id="display-tip-total" class="text-3xl font-black text-green-400">$0</span>
-                    </div>
+                    <div class="flex justify-between items-center mb-4"><span class="text-[10px] font-black text-green-500 uppercase">Propinas Mano</span><span id="display-tip-total" class="text-3xl font-black text-green-400">$0</span></div>
                     <div class="grid grid-cols-3 gap-3 mb-4">
                         <button onclick="addTip(200)" class="h-12 rounded-xl bg-zinc-900 text-green-400 border border-zinc-800 text-[10px] font-black">+$200</button>
                         <button onclick="addTip(500)" class="h-12 rounded-xl bg-zinc-900 text-green-400 border border-zinc-800 text-[10px] font-black">+$500</button>
@@ -113,15 +113,17 @@
 
                 <div class="card border-red-900/30">
                     <p class="text-[10px] font-black text-red-500 uppercase mb-2 text-center">Gasto Nafta</p>
-                    <input type="number" inputmode="decimal" id="form-gas" class="!text-red-500">
+                    <input type="number" inputmode="decimal" id="form-gas" class="!text-red-500" placeholder="0">
                 </div>
             </div>
 
+            <!-- HISTORIAL -->
             <div id="tab-historial" class="p-6 hidden space-y-4">
-                <div id="weekly-cut" class="space-y-4"></div>
-                <div id="history-list" class="space-y-4 pb-10"></div>
+                <div id="weekly-cut"></div>
+                <div id="history-list" class="space-y-4"></div>
             </div>
 
+            <!-- BALANCES -->
             <div id="tab-balances" class="p-6 hidden space-y-4"></div>
         </main>
 
@@ -146,12 +148,11 @@
         const db = firebase.firestore();
         const APP_ID = 'control-rider-eze';
         
-        // Forzamos persistencia local para evitar cierres de sesión
         auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
 
         let user = null, records = [], dailyTips = [], editingId = null, currentTab = 'registro';
 
-        // SWIPE GESTURES
+        // --- GESTOS SWIPE ---
         let touchstartX = 0;
         window.addEventListener('touchstart', e => touchstartX = e.changedTouches[0].screenX);
         window.addEventListener('touchend', e => { 
@@ -164,30 +165,28 @@
             }
         });
 
-        // LOGIN LOGIC
+        // --- LÓGICA DE LOGIN (Redirect para máxima compatibilidad) ---
         async function handleLogin() {
             const provider = new firebase.auth.GoogleAuthProvider();
-            // Usamos signInWithRedirect para evitar bloqueos en celulares
-            try {
-                await auth.signInWithRedirect(provider);
-            } catch (err) {
-                alert("Error al iniciar Google. Intentá de nuevo.");
-            }
+            provider.setCustomParameters({ prompt: 'select_account' });
+            auth.signInWithRedirect(provider);
         }
 
-        // Esta función atrapa el resultado después de que Google te devuelve a la app
+        // --- ESCUCHA DE ESTADO DE AUTENTICACIÓN (EL GUARDIA) ---
+        // Primero procesamos si volvemos de un redirect
         auth.getRedirectResult().then((result) => {
-            if (result.user) {
-                console.log("Login exitoso tras redirect");
-            }
+            // Si el result tiene usuario, el login fue exitoso
+            if (result.user) console.log("Login por redirección exitoso");
         }).catch((error) => {
-            console.error("Error redirect result:", error);
+            console.error("Error en redirección:", error);
         });
 
-        // ESCUCHA DE SESION
+        // Luego escuchamos el estado general
         auth.onAuthStateChanged(u => {
             user = u;
+            // Quitamos la pantalla de carga
             document.getElementById('view-loading').classList.add('hidden');
+            
             if (u) {
                 document.getElementById('view-login').classList.add('hidden');
                 document.getElementById('view-app').classList.remove('hidden');
@@ -205,23 +204,24 @@
                 auth.signOut().then(() => {
                     localStorage.clear();
                     location.reload();
-                }).catch(() => location.reload());
+                });
             }
         }
 
-        // --- SISTEMA ---
+        // --- FUNCIONES DE LA APP ---
         async function fetchData() {
             if(!user) return;
-            const snap = await db.collection('artifacts').doc(APP_ID).collection('users').doc(user.uid).collection('jornadas').orderBy('date', 'desc').get();
-            records = snap.docs.map(doc => ({id: doc.id, ...doc.data()}));
-            renderHistory(); renderBalances();
+            try {
+                const snap = await db.collection('artifacts').doc(APP_ID).collection('users').doc(user.uid).collection('jornadas').orderBy('date', 'desc').get();
+                records = snap.docs.map(doc => ({id: doc.id, ...doc.data()}));
+                renderHistory(); renderBalances();
+            } catch(e) { console.error("Error fetching:", e); }
         }
 
         function updateCountdown() {
             const m = new Date('2026-06-11T00:00:00');
             const d = Math.ceil((m - new Date()) / 864e5);
-            const el = document.getElementById('mundial-countdown');
-            if(el) el.innerText = `Faltan ${d} dias para el mundial 🇦🇷`;
+            document.getElementById('mundial-countdown').innerText = `Faltan ${d} dias para el mundial 🇦🇷`;
         }
 
         function addTip(v) { dailyTips.push({id: Date.now(), amount: v, time: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}); updateTipUI(); }
@@ -239,8 +239,7 @@
         async function saveRecord() {
             const date = document.getElementById('form-date').value;
             if(!date) return alert("Elegí una fecha");
-            const btn = document.getElementById('btn-save');
-            btn.disabled = true; btn.innerText = "Guardando...";
+            const btn = document.getElementById('btn-save'); btn.disabled = true;
             const d = new Date(date + 'T12:00:00');
             const data = {
                 date, month: d.getMonth(), year: d.getFullYear(), week: getWeekNumber(d),
@@ -259,7 +258,7 @@
                 if(editingId) await ref.doc(editingId).update(data); else await ref.add(data);
                 cancelEdit(); fetchData();
             } catch (e) { alert("Error al guardar"); }
-            btn.disabled = false; btn.innerText = editingId ? "Actualizar Jornada" : "Guardar Jornada";
+            btn.disabled = false;
         }
 
         function editRecord(id) {
@@ -272,7 +271,7 @@
             changeTab('registro');
         }
 
-        async function deleteRecord(id) { if(confirm("¿Borrar jornada?")) { await db.collection('artifacts').doc(APP_ID).collection('users').doc(user.uid).collection('jornadas').doc(id).delete(); fetchData(); } }
+        async function deleteRecord(id) { if(confirm("¿Borrar?")) { await db.collection('artifacts').doc(APP_ID).collection('users').doc(user.uid).collection('jornadas').doc(id).delete(); fetchData(); } }
         function cancelEdit() { editingId = null; ['base','online','logros','grupo','collected','gas'].forEach(k => document.getElementById('form-'+k).value = ''); dailyTips = []; updateTipUI(); document.getElementById('edit-indicator').classList.add('hidden'); document.getElementById('btn-save').innerText = "Guardar Jornada"; }
         function changeTab(t) { currentTab = t; ['registro','historial','balances'].forEach(v => { document.getElementById('tab-'+v).classList.add('hidden'); document.getElementById('btn-'+v).classList.remove('active'); }); document.getElementById('tab-'+t).classList.remove('hidden'); document.getElementById('btn-'+t).classList.add('active'); window.scrollTo(0,0); }
         function getWeekNumber(d) { d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7)); return Math.ceil((((d - new Date(Date.UTC(d.getUTCFullYear(), 0, 1))) / 864e5) + 1) / 7); }
@@ -286,37 +285,32 @@
             const totAde = weekRecs.reduce((s, r) => s + r.collected, 0);
             const aCobrar = totApp - totAde;
 
-            cut.innerHTML = `
-                <div class="card border border-cyan-500/20 bg-cyan-500/[0.04] mb-2">
-                    <div class="flex justify-between items-center mb-4"><span class="text-[9px] font-black text-cyan-400 uppercase italic">Semana ${curW}</span><span class="bg-cyan-500/10 text-cyan-400 text-[7px] px-2 py-1 rounded-lg font-black uppercase">Corte</span></div>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div class="text-center border-r border-zinc-900"><p class="text-[7px] text-zinc-500 uppercase font-black mb-1 italic">Banco</p><p class="text-xl font-black text-white">$${Math.round(aCobrar).toLocaleString()}</p></div>
-                        <div class="text-center"><p class="text-[7px] text-zinc-500 uppercase font-black mb-1 italic">Adelantos</p><p class="text-xl font-black text-yellow-500">$${Math.round(totAde).toLocaleString()}</p></div>
-                    </div>
+            cut.innerHTML = `<div class="card border border-cyan-500/20 bg-cyan-500/[0.04] mb-6">
+                <div class="flex justify-between items-center mb-4"><span class="text-[9px] font-black text-cyan-400 uppercase italic">Semana ${curW}</span><span class="bg-cyan-500/10 text-cyan-400 text-[7px] px-2 py-1 rounded-lg font-black uppercase">Corte</span></div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="text-center border-r border-zinc-900"><p class="text-[7px] text-zinc-500 uppercase font-black mb-1 italic">Banco</p><p class="text-xl font-black text-white">$${Math.round(aCobrar).toLocaleString()}</p></div>
+                    <div class="text-center"><p class="text-[7px] text-zinc-500 uppercase font-black mb-1 italic">Adelantos</p><p class="text-xl font-black text-yellow-500">$${Math.round(totAde).toLocaleString()}</p></div>
                 </div>
-                <p class="text-center text-[8px] font-black uppercase text-zinc-700 tracking-widest py-2">Lista de Jornadas</p>`;
+            </div>`;
 
             const ds = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
             records.forEach(r => {
-                const appT = r.base + r.online + r.logros + r.grupo;
-                const netD = appT + r.propinasMano - r.gas;
+                const net = (r.base + r.online + r.logros + r.grupo + r.propinasMano) - r.gas;
                 const nomD = ds[new Date(r.date + 'T12:00:00').getDay()];
-                list.innerHTML += `
-                    <div class="card border-l-4 border-cyan-500 mb-3 bg-zinc-950/40">
-                        <div class="flex justify-between items-start">
-                            <div><p class="text-[8px] text-zinc-600 font-black uppercase">${nomD} ${r.date.split('-').reverse().slice(0,2).join('/')}</p><p class="text-xl font-black">$${Math.round(netD).toLocaleString()} <span class="text-[9px] text-zinc-700 italic">NETO</span></p></div>
-                            <div class="flex gap-2">
-                                <button onclick="editRecord('${r.id}')" class="bg-zinc-900 px-3 py-2 rounded-xl text-cyan-400 text-[9px] font-black uppercase">Edit</button>
-                                <button onclick="deleteRecord('${r.id}')" class="bg-zinc-900 px-3 py-2 rounded-xl text-red-500 text-[9px] font-black uppercase">X</button>
-                            </div>
+                list.innerHTML += `<div class="card border-l-4 border-cyan-500 mb-3 bg-zinc-950/40">
+                    <div class="flex justify-between items-start">
+                        <div><p class="text-[8px] text-zinc-600 font-black uppercase">${nomD} ${r.date.split('-').reverse().slice(0,2).join('/')}</p><p class="text-xl font-black">$${Math.round(net).toLocaleString()} <span class="text-[9px] text-zinc-700 italic">NETO</span></p></div>
+                        <div class="flex gap-2">
+                            <button onclick="editRecord('${r.id}')" class="bg-zinc-900 px-3 py-2 rounded-xl text-cyan-400 text-[9px] font-black">Edit</button>
+                            <button onclick="deleteRecord('${r.id}')" class="bg-zinc-900 px-3 py-2 rounded-xl text-red-500 text-[9px] font-black">X</button>
                         </div>
-                    </div>`;
+                    </div>
+                </div>`;
             });
         }
 
         function renderBalances() {
-            const bal = document.getElementById('tab-balances'); 
-            bal.innerHTML = '<h3 class="text-center text-[10px] font-black uppercase mb-6 italic text-zinc-600 tracking-widest">Balances</h3>';
+            const bal = document.getElementById('tab-balances'); bal.innerHTML = '';
             const m = {}; records.forEach(r => { const k = `${r.year}-${r.month}`; if(!m[k]) m[k] = []; m[k].push(r); });
             Object.keys(m).sort().reverse().forEach(k => {
                 const data = m[k]; const tNet = data.reduce((s, r) => s + (r.base + r.online + r.logros + r.grupo + r.propinasMano - r.gas), 0);
@@ -329,10 +323,9 @@
 
         function exportExcel() {
             if(!records.length) return alert("Sin datos");
-            const ds = ["Dom", "Lun", "Mar", "Mie", "Jue", "Vie", "Sab"];
-            const exData = records.map(r => ({ Día: ds[new Date(r.date + 'T12:00:00').getDay()], Fecha: r.date, Base: r.base, Logros: r.logros, Grupo: r.grupo, Propina_App: r.online, Propina_Mano: r.propinasMano, Adelantos: r.collected, Nafta: r.gas, Neto: (r.base + r.online + r.logros + r.grupo + r.propinasMano) - r.gas }));
-            const ws = XLSX.utils.json_to_sheet(exData); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Datos");
-            XLSX.writeFile(wb, `Planilla_Rider_${Date.now()}.xlsx`);
+            const data = records.map(r => ({ Fecha: r.date, Neto: (r.base + r.online + r.logros + r.grupo + r.propinasMano) - r.gas }));
+            const ws = XLSX.utils.json_to_sheet(data); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Reporte");
+            XLSX.writeFile(wb, `Control_${Date.now()}.xlsx`);
         }
         window.onload = () => document.getElementById('form-date').value = new Date().toISOString().split('T')[0];
     </script>

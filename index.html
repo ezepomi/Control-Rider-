@@ -11,11 +11,10 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
-    <!-- Firebase SDK Modular -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
-        import { getFirestore, collection, doc, getDocs, addDoc, updateDoc, deleteDoc, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+        import { getFirestore, collection, doc, getDocs, addDoc, updateDoc, deleteDoc, query, orderBy, serverTimestamp, setDoc } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDGUD-PIo2zFBkiFqfkN0Fpaqqp5_jNInw",
@@ -31,17 +30,13 @@
         const db = getFirestore(app);
         const APP_ID = 'control-rider-eze';
 
-        // LOGIN POR POPUP (Evita el bucle de redirección en Chrome/Safari)
         window.handleLogin = async () => {
             const provider = new GoogleAuthProvider();
             provider.setCustomParameters({ prompt: 'select_account' });
             try {
                 await setPersistence(auth, browserLocalPersistence);
                 await signInWithPopup(auth, provider);
-            } catch (err) { 
-                console.error(err);
-                alert("Error al conectar con Google. Por favor, intentá de nuevo."); 
-            }
+            } catch (err) { alert("Error al conectar con Google."); console.error(err); }
         };
 
         window.handleLogout = () => {
@@ -50,7 +45,6 @@
             }
         };
 
-        // ESCUCHA DE SESIÓN DIRECTA
         onAuthStateChanged(auth, (u) => {
             window.user = u;
             document.getElementById('view-loading').classList.add('hidden');
@@ -66,13 +60,23 @@
             }
         });
 
-        // BASE DE DATOS
         window.fetchData = async () => {
             if(!window.user) return;
-            const ref = collection(db, 'artifacts', APP_ID, 'users', window.user.uid, 'jornadas');
-            const snap = await getDocs(query(ref, orderBy('date', 'desc')));
-            window.records = snap.docs.map(d => ({id: d.id, ...d.data()}));
-            window.renderHistory(); window.renderBalances();
+            
+            // Traer Jornadas
+            const refJornadas = collection(db, 'artifacts', APP_ID, 'users', window.user.uid, 'jornadas');
+            const snapJornadas = await getDocs(query(refJornadas, orderBy('date', 'desc')));
+            window.records = snapJornadas.docs.map(d => ({id: d.id, ...d.data()}));
+            
+            // Traer Metas Mensuales
+            const refMetas = collection(db, 'artifacts', APP_ID, 'users', window.user.uid, 'metas');
+            const snapMetas = await getDocs(refMetas);
+            window.metas = {};
+            snapMetas.docs.forEach(d => { window.metas[d.id] = d.data(); });
+
+            window.renderHistory(); 
+            window.renderBalances();
+            window.renderGoalWidget();
         };
 
         window.saveToFirebase = async (data, id = null) => {
@@ -85,6 +89,19 @@
         window.deleteFromFirebase = async (id) => {
             await deleteDoc(doc(db, 'artifacts', APP_ID, 'users', window.user.uid, 'jornadas', id));
             window.fetchData();
+        };
+
+        window.saveGoal = async () => {
+            const name = document.getElementById('goal-name-input').value || 'Objetivo Mensual';
+            const amount = parseFloat(document.getElementById('goal-amount-input').value) || 0;
+            const now = new Date();
+            const key = `${now.getFullYear()}-${now.getMonth()}`;
+            
+            const metaRef = doc(db, 'artifacts', APP_ID, 'users', window.user.uid, 'metas', key);
+            await setDoc(metaRef, { name, amount, updatedAt: serverTimestamp() });
+            
+            window.toggleGoalForm();
+            window.fetchData(); 
         };
     </script>
     
@@ -105,6 +122,8 @@
         .hidden { display: none !important; }
         .loading-spinner { border: 3px solid rgba(0, 243, 255, 0.1); border-top: 3px solid var(--n-cyan); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        /* Animación para el gráfico circular */
+        .circle-progress { transition: stroke-dashoffset 1s ease-out, stroke 0.5s ease; }
     </style>
 </head>
 <body class="max-w-md mx-auto min-h-screen flex flex-col bg-black">
@@ -192,7 +211,45 @@
             </div>
 
             <!-- PESTAÑA BALANCES -->
-            <div id="tab-balances" class="p-6 hidden space-y-4"></div>
+            <div id="tab-balances" class="p-6 hidden space-y-4">
+                
+                <!-- WIDGET OBJETIVO MENSUAL -->
+                <div id="goal-widget" class="card border-cyan-500/30 bg-cyan-900/10">
+                    <div class="flex justify-between items-center mb-4 border-b border-white/5 pb-2">
+                        <h3 id="goal-title" class="text-[11px] font-black uppercase text-cyan-400 tracking-widest">OBJETIVO MENSUAL</h3>
+                        <button onclick="toggleGoalForm()" class="text-[9px] bg-zinc-900 px-3 py-1 rounded-xl text-cyan-400 font-black uppercase">Editar</button>
+                    </div>
+                    
+                    <div id="goal-form" class="hidden mb-6 p-4 bg-black/60 rounded-xl border border-zinc-800">
+                        <input type="text" id="goal-name-input" placeholder="Nombre (Ej: Alquiler, Ahorro)" class="mb-3 !h-12 !text-sm !text-white">
+                        <input type="number" inputmode="decimal" id="goal-amount-input" placeholder="Monto Meta ($)" class="mb-3 !h-12 !text-sm">
+                        <button onclick="saveGoal()" class="w-full h-12 bg-cyan-500 text-black font-black text-[10px] rounded-xl uppercase">Guardar Meta</button>
+                    </div>
+
+                    <div class="flex items-center justify-between gap-4">
+                        <!-- Ruedita Gráfica -->
+                        <div class="relative w-24 h-24 flex-shrink-0">
+                            <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                                <circle cx="50" cy="50" r="40" fill="transparent" stroke="#222" stroke-width="8"></circle>
+                                <circle id="goal-circle" class="circle-progress" cx="50" cy="50" r="40" fill="transparent" stroke="#00f3ff" stroke-width="8" stroke-dasharray="251.2" stroke-dashoffset="251.2" stroke-linecap="round"></circle>
+                            </svg>
+                            <div class="absolute inset-0 flex flex-col items-center justify-center">
+                                <span id="goal-percentage" class="text-xl font-black text-white">0%</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Textos de Progreso -->
+                        <div class="flex-1 text-right">
+                            <p class="text-[8px] text-zinc-500 font-black uppercase mb-1">Progreso Neto Actual</p>
+                            <p id="goal-current" class="text-2xl font-black text-white">$0</p>
+                            <p class="text-[9px] text-zinc-500 font-black uppercase mt-1">De <span id="goal-target" class="text-cyan-400">$0</span></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- LISTA DE BALANCES -->
+                <div id="balances-list" class="space-y-4"></div>
+            </div>
         </main>
 
         <div class="fixed bottom-0 left-0 right-0 p-6 bg-black/95 backdrop-blur-2xl border-t border-zinc-900 max-w-md mx-auto z-40 flex gap-4">
@@ -202,7 +259,7 @@
     </div>
 
     <script>
-        window.records = []; window.dailyTips = []; window.editingId = null; window.currentTab = 'registro';
+        window.records = []; window.metas = {}; window.dailyTips = []; window.editingId = null; window.currentTab = 'registro';
 
         // SWIPE
         let touchstartX = 0;
@@ -306,16 +363,66 @@
             });
         };
 
+        // --- SISTEMA DE METAS MENSUALES ---
+        window.toggleGoalForm = () => {
+            const form = document.getElementById('goal-form');
+            form.classList.toggle('hidden');
+            if(!form.classList.contains('hidden')) {
+                const now = new Date(); const key = `${now.getFullYear()}-${now.getMonth()}`;
+                const meta = window.metas[key] || { name: 'Objetivo Mensual', amount: '' };
+                document.getElementById('goal-name-input').value = meta.name;
+                document.getElementById('goal-amount-input').value = meta.amount;
+            }
+        };
+
+        window.renderGoalWidget = () => {
+            const now = new Date();
+            const key = `${now.getFullYear()}-${now.getMonth()}`;
+            const meta = window.metas[key] || { name: 'OBJETIVO MENSUAL', amount: 0 };
+            
+            // Calculo de neto del mes actual
+            const currentMonthRecs = window.records.filter(r => r.year === now.getFullYear() && r.month === now.getMonth());
+            const currentNet = currentMonthRecs.reduce((s, r) => s + (r.base + r.online + r.logros + r.grupo + r.propinasMano - r.gas), 0);
+            
+            let percent = 0;
+            if (meta.amount > 0) percent = (currentNet / meta.amount) * 100;
+
+            document.getElementById('goal-title').innerText = meta.name.toUpperCase();
+            document.getElementById('goal-target').innerText = meta.amount > 0 ? `$${meta.amount.toLocaleString()}` : "Sin meta";
+            document.getElementById('goal-current').innerText = `$${Math.round(currentNet).toLocaleString()}`;
+            document.getElementById('goal-percentage').innerText = `${Math.round(percent)}%`;
+
+            // Animación de la rueda SVG
+            const circle = document.getElementById('goal-circle');
+            const percentageText = document.getElementById('goal-percentage');
+            const circumference = 251.2; // 2 * pi * r (40)
+            const displayPercent = Math.min(percent, 100);
+            
+            // Actualizar offset del trazo (animación suave)
+            setTimeout(() => {
+                circle.style.strokeDashoffset = circumference - (displayPercent / 100) * circumference;
+            }, 100);
+
+            // Efecto si llega a la meta
+            if (percent >= 100 && meta.amount > 0) {
+                circle.style.stroke = '#39ff14'; // Verde Neón
+                percentageText.classList.add('text-green-400');
+            } else {
+                circle.style.stroke = '#00f3ff'; // Cyan
+                percentageText.classList.remove('text-green-400');
+            }
+        };
+
         window.renderBalances = () => {
-            const bal = document.getElementById('tab-balances'); 
-            bal.innerHTML = '<h3 class="text-center text-[10px] font-black uppercase mb-6 italic text-zinc-600 tracking-widest">Balances Mensuales</h3>';
+            const balList = document.getElementById('balances-list'); 
+            balList.innerHTML = '';
             const m = {}; window.records.forEach(r => { const k = `${r.year}-${r.month}`; if(!m[k]) m[k] = []; m[k].push(r); });
             Object.keys(m).sort().reverse().forEach(k => {
                 const data = m[k]; const tNet = data.reduce((s, r) => s + (r.base + r.online + r.logros + r.grupo + r.propinasMano - r.gas), 0);
                 let wkH = ''; const w = {}; data.forEach(r => { if(!w[r.week]) w[r.week] = 0; w[r.week] += (r.base + r.online + r.logros + r.grupo + r.propinasMano - r.gas); });
                 Object.keys(w).sort().reverse().forEach(wk => { wkH += `<div class="flex justify-between py-3 border-b border-white/5 text-[10px]"><span>Semana ${wk}</span><span class="text-cyan-400 font-bold">$${Math.round(w[wk]).toLocaleString()}</span></div>`; });
                 const mesNom = new Date(data[0].date + 'T12:00:00').toLocaleString('es', {month:'long', year:'numeric'}).toUpperCase();
-                bal.innerHTML += `<div class="card" onclick="this.querySelector('.weeks').classList.toggle('hidden')"><div class="flex justify-between items-center"><b>${mesNom}</b><b class="text-green-400">$${Math.round(tNet).toLocaleString()}</b></div><div class="weeks hidden mt-4 border-t border-white/5 pt-2">${wkH}</div></div>`;
+                balList.innerHTML += `<div class="card" onclick="this.querySelector('.weeks').classList.toggle('hidden')"><div class="flex justify-between items-center"><b>${mesNom}</b><b class="text-green-400">$${Math.round(tNet).toLocaleString()}</b></div><div class="weeks hidden mt-4 border-t border-white/5 pt-2">${wkH}</div></div>`;
             });
         };
 

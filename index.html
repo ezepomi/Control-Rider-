@@ -87,10 +87,11 @@
 
             useEffect(() => {
                 if (!user) return;
-                const unsub = db.collection(`usuarios/${user.uid}/turnos`).orderBy('timestamp', 'desc').onSnapshot(s => {
+                // ACÁ ESTÁ LA CORRECCIÓN CLAVE: Buscamos en 'users' y no en 'usuarios'
+                const unsub = db.collection(`users/${user.uid}/turnos`).orderBy('timestamp', 'desc').onSnapshot(s => {
                     setTurnos(s.docs.map(d => ({id: d.id, ...d.data()})));
                 });
-                const unsubConfig = db.collection(`usuarios/${user.uid}/config`).doc('corte').onSnapshot(d => {
+                const unsubConfig = db.collection(`users/${user.uid}/config`).doc('corte').onSnapshot(d => {
                     if (d.exists) setConfigCorte(d.data());
                 });
                 return () => { unsub(); unsubConfig(); };
@@ -133,7 +134,8 @@
                     adelantosEfectivo: Number(d.adelantosEfectivo||0), nafta: Number(d.nafta||0),
                     fecha: new Date().toLocaleDateString('es-AR', { weekday: 'long', year: 'numeric', month: 'numeric', day: 'numeric' }), timestamp: new Date().getTime()
                 };
-                await db.collection(`usuarios/${user.uid}/turnos`).add(payload);
+                // CORRECCIÓN EN EL GUARDADO
+                await db.collection(`users/${user.uid}/turnos`).add(payload);
                 setFormData({ base: '', propinaOnline: '', logros: '', bonos: '', adelantosEfectivo: '', nafta: '' });
                 alert("Jornada Guardada con Éxito");
             };
@@ -156,7 +158,7 @@
                 turnosPeriodo.forEach(t => {
                     sumBase += (t.base || 0); sumPropOnline += (t.propinaOnline || 0);
                     sumLogros += ((t.logros || 0) + (t.bonos || 0)); 
-                    sumEfectivo += (t.adelantosEfectivo || t.propinaEfectivo || 0); // compatibilidad con historial viejo
+                    sumEfectivo += (t.adelantosEfectivo || t.propinaEfectivo || 0); 
                     sumNafta += (t.nafta || 0);
                 });
 
@@ -255,13 +257,15 @@
                                     <div className="grid grid-cols-2 gap-4">
                                         <select value={configCorte.dia} onChange={e => {
                                             const n = { ...configCorte, dia: Number(e.target.value) };
-                                            setConfigCorte(n); db.collection(`usuarios/${user.uid}/config`).doc('corte').set(n);
+                                            // CORRECCIÓN AL GUARDAR LA CONFIGURACIÓN
+                                            setConfigCorte(n); db.collection(`users/${user.uid}/config`).doc('corte').set(n);
                                         }} className="bg-black/50 border border-gray-800 p-4 rounded-xl font-bold text-sm outline-none">
                                             <option value={1}>Lunes</option><option value={2}>Martes</option><option value={3}>Miércoles</option><option value={4}>Jueves</option><option value={5}>Viernes</option><option value={6}>Sábado</option><option value={0}>Domingo</option>
                                         </select>
                                         <input type="time" value={configCorte.hora} onChange={e => {
                                             const n = { ...configCorte, hora: e.target.value };
-                                            setConfigCorte(n); db.collection(`usuarios/${user.uid}/config`).doc('corte').set(n);
+                                            // CORRECCIÓN AL GUARDAR LA CONFIGURACIÓN
+                                            setConfigCorte(n); db.collection(`users/${user.uid}/config`).doc('corte').set(n);
                                         }} className="bg-black/50 border border-gray-800 p-4 rounded-xl font-bold text-sm outline-none" />
                                     </div>
                                 </div>
@@ -286,7 +290,8 @@
                                                     <p className="font-black text-xl">${neto.toLocaleString()}</p>
                                                 </div>
                                                 <button onClick={() => {
-                                                    if(window.confirm('¿Borrar jornada?')) db.collection(`usuarios/${user.uid}/turnos`).doc(t.id).delete();
+                                                    // CORRECCIÓN EN EL BORRADO
+                                                    if(window.confirm('¿Borrar jornada?')) db.collection(`users/${user.uid}/turnos`).doc(t.id).delete();
                                                 }} className="text-gray-600 hover:text-rose-500 p-2"><Icons.Trash /></button>
                                             </div>
                                         </div>

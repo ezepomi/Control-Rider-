@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Rider Control Pro</title>
+    <title>Centro de Control - Rider</title>
     
     <!-- Escudo Anti-Errores -->
     <script>
@@ -47,13 +47,14 @@
     <script type="text/babel">
         const { useState, useEffect, useMemo } = React;
 
+        // TU LLAVE ORIGINAL DE PEDIDOS YA
         const firebaseConfig = {
-            apiKey: "AIzaSyDtmxXb4wdkelAGeISytgj5JqQ3BGZvpzM",
-            authDomain: "billetera-personal-d4ca9.firebaseapp.com",
-            projectId: "billetera-personal-d4ca9",
-            storageBucket: "billetera-personal-d4ca9.firebasestorage.app",
-            messagingSenderId: "762760084018",
-            appId: "1:762760084018:web:de9213b7defd8e1dc11a2b"
+            apiKey: "AIzaSyDGUD-PIo2zFBkiFqfkN0Fpaqqp5_jNInw",
+            authDomain: "control-financiero-rider.firebaseapp.com",
+            projectId: "control-financiero-rider",
+            storageBucket: "control-financiero-rider.firebasestorage.app",
+            messagingSenderId: "952661224242",
+            appId: "1:952661224242:web:3640495af6d4719c33052b"
         };
 
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
@@ -74,11 +75,10 @@
             const [authChecking, setAuthChecking] = useState(true);
             const [tab, setTab] = useState('registro');
             const [turnos, setTurnos] = useState([]);
-            const [configCorte, setConfigCorte] = useState({ dia: 2, hora: "16:00" }); // 2 = Martes
+            const [configCorte, setConfigCorte] = useState({ dia: 2, hora: "16:00" }); 
             const [ocrLoading, setOcrLoading] = useState(false);
             
-            // Formularios
-            const [formData, setFormData] = useState({ base: '', propinaOnline: '', logros: '', bonos: '', propinaEfectivo: '', nafta: '' });
+            const [formData, setFormData] = useState({ base: '', propinaOnline: '', logros: '', bonos: '', adelantosEfectivo: '', nafta: '' });
 
             useEffect(() => {
                 const unsub = auth.onAuthStateChanged(u => { setUser(u); setAuthChecking(false); });
@@ -104,7 +104,6 @@
                     const result = await Tesseract.recognize(file, 'spa');
                     const text = result.data.text.toLowerCase();
                     
-                    // IA Básica: Extraer números cerca de palabras clave
                     const extractNum = (keyword) => {
                         const regex = new RegExp(`${keyword}[^0-9]*([0-9.,]+)`, 'i');
                         const match = text.match(regex);
@@ -118,7 +117,7 @@
                         logros: extractNum('logro') || prev.logros,
                         bonos: extractNum('bono') || prev.bonos
                     }));
-                    alert("¡Escaneo completo! Revisá los montos por las dudas.");
+                    alert("¡Escaneo completo! Revisá los montos por si acaso.");
                 } catch (error) {
                     alert("Hubo un error al leer la imagen.");
                 }
@@ -131,18 +130,17 @@
                 const payload = {
                     base: Number(d.base||0), propinaOnline: Number(d.propinaOnline||0),
                     logros: Number(d.logros||0), bonos: Number(d.bonos||0),
-                    propinaEfectivo: Number(d.propinaEfectivo||0), nafta: Number(d.nafta||0),
-                    fecha: new Date().toLocaleDateString('es-AR'), timestamp: new Date().getTime()
+                    adelantosEfectivo: Number(d.adelantosEfectivo||0), nafta: Number(d.nafta||0),
+                    fecha: new Date().toLocaleDateString('es-AR', { weekday: 'long', year: 'numeric', month: 'numeric', day: 'numeric' }), timestamp: new Date().getTime()
                 };
                 await db.collection(`usuarios/${user.uid}/turnos`).add(payload);
-                setFormData({ base: '', propinaOnline: '', logros: '', bonos: '', propinaEfectivo: '', nafta: '' });
+                setFormData({ base: '', propinaOnline: '', logros: '', bonos: '', adelantosEfectivo: '', nafta: '' });
                 alert("Jornada Guardada con Éxito");
             };
 
             const calcularCobros = useMemo(() => {
-                // Cálculo de fechas de corte para la separación real de depósitos
                 const now = new Date();
-                const currentDay = now.getDay(); // 0 = Dom, 1 = Lun, 2 = Mar...
+                const currentDay = now.getDay(); 
                 let lastCutoff = new Date(now);
                 let daysSinceCutoff = currentDay >= configCorte.dia ? currentDay - configCorte.dia : 7 - (configCorte.dia - currentDay);
                 
@@ -156,8 +154,10 @@
 
                 let sumBase = 0, sumPropOnline = 0, sumEfectivo = 0, sumLogros = 0, sumNafta = 0;
                 turnosPeriodo.forEach(t => {
-                    sumBase += t.base; sumPropOnline += t.propinaOnline;
-                    sumLogros += (t.logros + t.bonos); sumEfectivo += t.propinaEfectivo; sumNafta += t.nafta;
+                    sumBase += (t.base || 0); sumPropOnline += (t.propinaOnline || 0);
+                    sumLogros += ((t.logros || 0) + (t.bonos || 0)); 
+                    sumEfectivo += (t.adelantosEfectivo || t.propinaEfectivo || 0); // compatibilidad con historial viejo
+                    sumNafta += (t.nafta || 0);
                 });
 
                 const transfPropinas = sumPropOnline;
@@ -166,13 +166,13 @@
                 return { transfPropinas, transfSueldo, lastCutoff, sumNafta, sumEfectivo };
             }, [turnos, configCorte]);
 
-            if (authChecking) return <div className="h-screen flex items-center justify-center"><div className="loader"></div></div>;
+            if (authChecking) return <div className="h-screen flex items-center justify-center bg-[#0B0E14]"><div className="loader"></div></div>;
 
             if (!user) return (
                 <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-black relative">
                     <div className="absolute inset-0 bg-gradient-to-br from-cyan-900/20 to-black z-0"></div>
                     <div className="relative z-10 w-full max-w-sm glass p-8 rounded-3xl text-center">
-                        <h1 className="text-3xl font-black italic uppercase tracking-widest neon-text text-cyan-400 mb-8">CYBER RIDER</h1>
+                        <h1 className="text-3xl font-black italic uppercase tracking-widest neon-text text-cyan-400 mb-8">CENTRO DE MANDO</h1>
                         <button onClick={() => auth.signInWithPopup(provider)} className="w-full bg-cyan-500 hover:bg-cyan-400 text-black py-4 rounded-xl font-black uppercase tracking-widest transition-all">Ingresar con Google</button>
                     </div>
                 </div>
@@ -207,14 +207,14 @@
                                     <form onSubmit={guardarTurno} className="space-y-4 relative z-10">
                                         <div className="grid grid-cols-2 gap-4">
                                             <div><label className="text-[10px] uppercase text-gray-400 font-bold ml-2">Base App $</label><input type="number" required value={formData.base} onChange={e=>setFormData({...formData, base: e.target.value})} className="w-full bg-black/50 border border-gray-800 p-4 rounded-2xl font-black text-xl outline-none focus:border-cyan-500" /></div>
-                                            <div><label className="text-[10px] uppercase text-gray-400 font-bold ml-2">Propina Online $</label><input type="number" required value={formData.propinaOnline} onChange={e=>setFormData({...formData, propinaOnline: e.target.value})} className="w-full bg-black/50 border border-gray-800 p-4 rounded-2xl font-black text-xl outline-none focus:border-cyan-500" /></div>
+                                            <div><label className="text-[10px] uppercase text-gray-400 font-bold ml-2">Propinas Online $</label><input type="number" required value={formData.propinaOnline} onChange={e=>setFormData({...formData, propinaOnline: e.target.value})} className="w-full bg-black/50 border border-gray-800 p-4 rounded-2xl font-black text-xl outline-none focus:border-cyan-500" /></div>
                                             <div><label className="text-[10px] uppercase text-gray-400 font-bold ml-2">Logros $</label><input type="number" value={formData.logros} onChange={e=>setFormData({...formData, logros: e.target.value})} className="w-full bg-black/50 border border-gray-800 p-4 rounded-2xl font-black text-xl outline-none focus:border-cyan-500" /></div>
                                             <div><label className="text-[10px] uppercase text-gray-400 font-bold ml-2">Bonos $</label><input type="number" value={formData.bonos} onChange={e=>setFormData({...formData, bonos: e.target.value})} className="w-full bg-black/50 border border-gray-800 p-4 rounded-2xl font-black text-xl outline-none focus:border-cyan-500" /></div>
                                         </div>
 
                                         <div className="pt-4 border-t border-gray-800">
-                                            <label className="text-[10px] uppercase text-emerald-400 font-bold ml-2">Efectivo Recolectado (Adelantos) $</label>
-                                            <input type="number" required value={formData.propinaEfectivo} onChange={e=>setFormData({...formData, propinaEfectivo: e.target.value})} className="w-full bg-emerald-900/20 border border-emerald-900/50 p-4 rounded-2xl font-black text-xl text-emerald-400 outline-none focus:border-emerald-500 mt-1" />
+                                            <label className="text-[10px] uppercase text-emerald-400 font-bold ml-2">Adelantos en Efectivo $</label>
+                                            <input type="number" required value={formData.adelantosEfectivo} onChange={e=>setFormData({...formData, adelantosEfectivo: e.target.value})} className="w-full bg-emerald-900/20 border border-emerald-900/50 p-4 rounded-2xl font-black text-xl text-emerald-400 outline-none focus:border-emerald-500 mt-1" />
                                         </div>
 
                                         <div className="pt-2">
@@ -228,7 +228,7 @@
                             </div>
                         )}
 
-                        {/* PESTAÑA COBROS (Nuevo Algoritmo) */}
+                        {/* PESTAÑA COBROS */}
                         {tab === 'cobros' && (
                             <div className="animate-in fade-in space-y-6">
                                 <div className="glass p-6 rounded-3xl bg-cyan-900/10 border-cyan-900/30">
@@ -241,7 +241,7 @@
                                             <p className="text-3xl font-black text-emerald-400">${calcularCobros.transfPropinas.toLocaleString()}</p>
                                         </div>
                                         <div className="glass p-4 rounded-2xl border-amber-900/50">
-                                            <p className="text-[10px] uppercase font-bold text-gray-400 mb-1">Transferencia 2: Sueldo Base (Base+Logros - Efectivo)</p>
+                                            <p className="text-[10px] uppercase font-bold text-gray-400 mb-1">Transferencia 2: Sueldo Base (Base+Logros - Adelantos)</p>
                                             <p className={`text-3xl font-black ${calcularCobros.transfSueldo >= 0 ? 'text-amber-400' : 'text-rose-500'}`}>
                                                 ${calcularCobros.transfSueldo.toLocaleString()}
                                             </p>
@@ -273,11 +273,11 @@
                             <div className="animate-in fade-in space-y-4">
                                 <h3 className="font-black text-lg mb-4 text-cyan-300 uppercase italic">Historial de Jornadas</h3>
                                 {turnos.length === 0 ? <p className="text-center text-gray-500 p-6">No hay registros aún.</p> : turnos.map(t => {
-                                    const neto = (t.base + t.propinaOnline + t.logros + t.bonos + t.propinaEfectivo) - t.nafta;
+                                    const neto = (t.base + t.propinaOnline + t.logros + t.bonos + (t.adelantosEfectivo || t.propinaEfectivo || 0)) - t.nafta;
                                     return (
                                         <div key={t.id} className="glass p-5 rounded-2xl flex justify-between items-center">
                                             <div>
-                                                <p className="font-black text-sm">{t.fecha}</p>
+                                                <p className="font-black text-sm capitalize">{t.fecha}</p>
                                                 <p className="text-[10px] text-gray-400 font-bold uppercase mt-1">Bruto: ${(neto + t.nafta).toLocaleString()} | Nafta: ${t.nafta}</p>
                                             </div>
                                             <div className="text-right flex items-center gap-4">

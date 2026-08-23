@@ -5,28 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Centro de Mando - Rider</title>
     
-    <!-- Escudo Anti-Errores -->
     <script>
         window.onerror = function(message, source, lineno) {
-            document.body.innerHTML = '<div style="background:#000; color:#0f0; padding:20px; font-family:monospace; min-height:100vh;"><h2>❌ ERROR</h2><p>' + message + '</p><p>Línea: ' + lineno + '</p></div>';
+            console.error(message);
             return true;
         };
     </script>
 
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Firebase Compat -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-    
-    <!-- React & Babel -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-
-    <!-- Tesseract.js (Inteligencia Artificial para OCR) -->
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800;900&display=swap" rel="stylesheet">
@@ -39,7 +31,6 @@
         .num-font { font-variant-numeric: tabular-nums; }
         .loader { border: 3px solid rgba(255,255,255,0.1); border-top-color: #00FFCC; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
-        /* Ajuste para que el ícono del calendario se vea bien en fondos oscuros */
         input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); }
     </style>
 </head>
@@ -49,7 +40,6 @@
     <script type="text/babel">
         const { useState, useEffect, useMemo } = React;
 
-        // LLAVE ORIGINAL DE PEDIDOS YA
         const firebaseConfig = {
             apiKey: "AIzaSyDGUD-PIo2zFBkiFqfkN0Fpaqqp5_jNInw",
             authDomain: "control-financiero-rider.firebaseapp.com",
@@ -69,7 +59,8 @@
             History: () => <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16c0 1.1.9 2 2 2h12a2 2 0 0 0 2-2V8l-6-6z"/><path d="M14 3v5h5M16 13H8M16 17H8M10 9H8"/></svg>,
             Wallet: () => <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>,
             Camera: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>,
-            Trash: () => <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+            Trash: () => <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>,
+            Edit: () => <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
         };
 
         const App = () => {
@@ -80,15 +71,19 @@
             const [configCorte, setConfigCorte] = useState({ dia: 2, hora: "16:00" }); 
             const [ocrLoading, setOcrLoading] = useState(false);
             
+            const [expandedMonth, setExpandedMonth] = useState(null);
+            const [expandedWeek, setExpandedWeek] = useState(null);
+            
             const [formData, setFormData] = useState({ 
-                base: '', 
-                propinaOnline: '', 
-                logros: '', 
-                bonos: '', 
-                adelantosEfectivo: '', 
-                nafta: '',
-                fechaRegistro: new Date().toISOString().split('T')[0] // Formato YYYY-MM-DD para el calendario
+                base: '', propinaOnline: '', logros: '', bonos: '', adelantosEfectivo: '', nafta: '', fechaRegistro: ''
             });
+
+            // Setear la fecha local correcta al iniciar
+            useEffect(() => {
+                const today = new Date();
+                const defaultDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+                setFormData(prev => ({ ...prev, fechaRegistro: defaultDate }));
+            }, []);
 
             useEffect(() => {
                 const unsub = auth.onAuthStateChanged(u => { 
@@ -100,15 +95,13 @@
 
             useEffect(() => {
                 if (!user) return; 
-                
-                // RESTAURADO A 'usuarios' PARA BUSCAR TU HISTORIAL ORIGINAL
                 const unsub = db.collection(`usuarios/${user.uid}/turnos`).orderBy('timestamp', 'desc').onSnapshot(s => {
                     setTurnos(s.docs.map(d => ({id: d.id, ...d.data()})));
-                }, e => console.error("Error historial:", e));
+                }, e => console.error(e));
                 
                 const unsubConfig = db.collection(`usuarios/${user.uid}/config`).doc('corte').onSnapshot(d => {
                     if (d.exists) setConfigCorte(d.data());
-                }, e => console.error("Error config:", e));
+                }, e => console.error(e));
                 
                 return () => { unsub(); unsubConfig(); };
             }, [user]);
@@ -126,10 +119,8 @@
                         const match = text.match(regex);
                         if (match) {
                             let numStr = match[1];
-                            // CORTAMOS EXACTAMENTE EN EL PUNTO PARA DESCARTAR LOS CÉNTIMOS
-                            let integerPart = numStr.split('.')[0];
-                            // LIMPIAMOS LAS COMAS
-                            return integerPart.replace(/[^0-9]/g, '');
+                            let integerPart = numStr.split('.')[0]; // CORTA EN EL PUNTO PARA IGNORAR CENTAVOS
+                            return integerPart.replace(/[^0-9]/g, ''); // LIMPIA COMAS
                         }
                         return '';
                     };
@@ -150,27 +141,50 @@
 
             const guardarTurno = async (e) => {
                 e.preventDefault();
-                if (!user) return alert("Error: No has iniciado sesión.");
+                if (!user) return;
                 
                 const d = formData;
-                // Creamos la fecha exacta respetando el día que elegiste en el calendario
-                const dateObj = new Date(d.fechaRegistro + 'T12:00:00');
-                const fechaFormat = dateObj.toLocaleDateString('es-AR', { weekday: 'long', year: 'numeric', month: 'numeric', day: 'numeric' });
+                // Ajuste de zona horaria para que la fecha guarde el día correcto
+                const [year, month, day] = d.fechaRegistro.split('-');
+                const dateObj = new Date(year, month - 1, day, 12, 0, 0); 
+                const fechaFormat = dateObj.toLocaleDateString('es-AR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
                 const payload = {
                     base: Number(d.base||0), propinaOnline: Number(d.propinaOnline||0),
                     logros: Number(d.logros||0), bonos: Number(d.bonos||0),
                     adelantosEfectivo: Number(d.adelantosEfectivo||0), nafta: Number(d.nafta||0),
-                    fecha: fechaFormat, 
-                    timestamp: dateObj.getTime()
+                    fecha: fechaFormat, timestamp: dateObj.getTime()
                 };
                 
                 await db.collection(`usuarios/${user.uid}/turnos`).add(payload);
-                setFormData({ 
-                    base: '', propinaOnline: '', logros: '', bonos: '', adelantosEfectivo: '', nafta: '',
-                    fechaRegistro: new Date().toISOString().split('T')[0] // Resetea el calendario a hoy
-                });
+                setFormData(prev => ({ 
+                    base: '', propinaOnline: '', logros: '', bonos: '', adelantosEfectivo: '', nafta: '', fechaRegistro: prev.fechaRegistro 
+                }));
                 alert("Jornada Guardada con Éxito");
+            };
+
+            const editarTurno = async (t) => {
+                const nuevaBase = prompt("Base App $:", t.base);
+                if (nuevaBase === null) return;
+                const nuevaPropina = prompt("Propinas Online $:", t.propinaOnline || 0);
+                if (nuevaPropina === null) return;
+                const nuevosLogros = prompt("Logros $:", t.logros || 0);
+                if (nuevosLogros === null) return;
+                const nuevosBonos = prompt("Bonos $:", t.bonos || 0);
+                if (nuevosBonos === null) return;
+                const nuevosAdelantos = prompt("Adelantos en Efectivo $:", t.adelantosEfectivo || 0);
+                if (nuevosAdelantos === null) return;
+                const nuevaNafta = prompt("Nafta $:", t.nafta || 0);
+                if (nuevaNafta === null) return;
+
+                await db.collection(`usuarios/${user.uid}/turnos`).doc(t.id).update({
+                    base: Number(nuevaBase),
+                    propinaOnline: Number(nuevaPropina),
+                    logros: Number(nuevosLogros),
+                    bonos: Number(nuevosBonos),
+                    adelantosEfectivo: Number(nuevosAdelantos),
+                    nafta: Number(nuevaNafta)
+                });
             };
 
             const calcularCobros = useMemo(() => {
@@ -187,19 +201,45 @@
 
                 const turnosPeriodo = turnos.filter(t => t.timestamp >= lastCutoff.getTime());
 
-                let sumBase = 0, sumPropOnline = 0, sumEfectivo = 0, sumLogros = 0, sumNafta = 0;
+                let sumBase = 0, sumPropOnline = 0, sumEfectivo = 0, sumLogros = 0;
                 turnosPeriodo.forEach(t => {
                     sumBase += (t.base || 0); sumPropOnline += (t.propinaOnline || 0);
                     sumLogros += ((t.logros || 0) + (t.bonos || 0)); 
-                    sumEfectivo += (t.adelantosEfectivo || t.propinaEfectivo || 0); 
-                    sumNafta += (t.nafta || 0);
+                    sumEfectivo += (t.adelantosEfectivo || 0); 
                 });
 
                 const transfPropinas = sumPropOnline;
                 const transfSueldo = (sumBase + sumLogros) - sumEfectivo;
 
-                return { transfPropinas, transfSueldo, lastCutoff, sumNafta, sumEfectivo };
+                return { transfPropinas, transfSueldo, lastCutoff };
             }, [turnos, configCorte]);
+
+            const groupedHistorial = useMemo(() => {
+                const groups = {};
+                turnos.forEach(t => {
+                    const d = new Date(t.timestamp);
+                    const monthYear = d.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' });
+
+                    const day = d.getDay();
+                    const diffToMonday = day === 0 ? -6 : 1 - day;
+                    const monday = new Date(d);
+                    monday.setDate(d.getDate() + diffToMonday);
+                    const sunday = new Date(monday);
+                    sunday.setDate(monday.getDate() + 6);
+                    const weekStr = `Semana del ${monday.toLocaleDateString('es-AR', {day:'2-digit', month:'2-digit'})} al ${sunday.toLocaleDateString('es-AR', {day:'2-digit', month:'2-digit'})}`;
+
+                    if(!groups[monthYear]) groups[monthYear] = { totalNeto: 0, weeks: {} };
+                    if(!groups[monthYear].weeks[weekStr]) groups[monthYear].weeks[weekStr] = { totalNeto: 0, days: [] };
+
+                    // ADELANTOS EXCLUIDOS DEL NETO
+                    const neto = (t.base + (t.propinaOnline||0) + (t.logros||0) + (t.bonos||0)) - (t.nafta||0);
+                    
+                    groups[monthYear].totalNeto += neto;
+                    groups[monthYear].weeks[weekStr].totalNeto += neto;
+                    groups[monthYear].weeks[weekStr].days.push(t);
+                });
+                return groups;
+            }, [turnos]);
 
             if (authChecking) return <div className="h-screen flex items-center justify-center bg-[#0B0E14]"><div className="loader"></div></div>;
 
@@ -226,7 +266,6 @@
                     </header>
 
                     <main className="px-6 space-y-6">
-                        {/* PESTAÑA REGISTRO */}
                         {tab === 'registro' && (
                             <div className="animate-in fade-in space-y-6">
                                 <div className="glass p-6 rounded-3xl relative overflow-hidden">
@@ -239,7 +278,6 @@
                                     </label>
 
                                     <form onSubmit={guardarTurno} className="space-y-4 relative z-10">
-                                        
                                         <div className="mb-4">
                                             <label className="text-[10px] uppercase text-gray-400 font-bold ml-2">Fecha del Turno</label>
                                             <input type="date" required value={formData.fechaRegistro} onChange={e=>setFormData({...formData, fechaRegistro: e.target.value})} className="w-full bg-black/50 border border-gray-800 p-4 rounded-2xl font-bold text-lg text-gray-300 outline-none focus:border-cyan-500 mt-1" />
@@ -268,7 +306,6 @@
                             </div>
                         )}
 
-                        {/* PESTAÑA COBROS */}
                         {tab === 'cobros' && (
                             <div className="animate-in fade-in space-y-6">
                                 <div className="glass p-6 rounded-3xl bg-cyan-900/10 border-cyan-900/30">
@@ -281,7 +318,7 @@
                                             <p className="text-3xl font-black text-emerald-400">${calcularCobros.transfPropinas.toLocaleString()}</p>
                                         </div>
                                         <div className="glass p-4 rounded-2xl border-amber-900/50">
-                                            <p className="text-[10px] uppercase font-bold text-gray-400 mb-1">Transferencia 2: Sueldo Base (Base+Logros - Adelantos)</p>
+                                            <p className="text-[10px] uppercase font-bold text-gray-400 mb-1">Transferencia 2: Sueldo Base (App - Adelantos)</p>
                                             <p className={`text-3xl font-black ${calcularCobros.transfSueldo >= 0 ? 'text-amber-400' : 'text-rose-500'}`}>
                                                 ${calcularCobros.transfSueldo.toLocaleString()}
                                             </p>
@@ -289,56 +326,63 @@
                                         </div>
                                     </div>
                                 </div>
-
-                                <div className="glass p-6 rounded-3xl">
-                                    <h3 className="font-black text-sm mb-4 text-gray-300 uppercase">Ajuste de Corte Semanal</h3>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <select value={configCorte.dia} onChange={e => {
-                                            const n = { ...configCorte, dia: Number(e.target.value) };
-                                            setConfigCorte(n); 
-                                            if (user) db.collection(`usuarios/${user.uid}/config`).doc('corte').set(n);
-                                        }} className="bg-black/50 border border-gray-800 p-4 rounded-xl font-bold text-sm outline-none">
-                                            <option value={1}>Lunes</option><option value={2}>Martes</option><option value={3}>Miércoles</option><option value={4}>Jueves</option><option value={5}>Viernes</option><option value={6}>Sábado</option><option value={0}>Domingo</option>
-                                        </select>
-                                        <input type="time" value={configCorte.hora} onChange={e => {
-                                            const n = { ...configCorte, hora: e.target.value };
-                                            setConfigCorte(n); 
-                                            if (user) db.collection(`usuarios/${user.uid}/config`).doc('corte').set(n);
-                                        }} className="bg-black/50 border border-gray-800 p-4 rounded-xl font-bold text-sm outline-none" />
-                                    </div>
-                                </div>
                             </div>
                         )}
 
-                        {/* PESTAÑA HISTORIAL */}
                         {tab === 'historial' && (
                             <div className="animate-in fade-in space-y-4">
-                                <h3 className="font-black text-lg mb-4 text-cyan-300 uppercase italic">Historial de Jornadas</h3>
-                                {turnos.length === 0 ? <p className="text-center text-gray-500 p-6">No hay registros aún.</p> : turnos.map(t => {
-                                    const neto = (t.base + t.propinaOnline + t.logros + t.bonos + (t.adelantosEfectivo || t.propinaEfectivo || 0)) - t.nafta;
-                                    return (
-                                        <div key={t.id} className="glass p-5 rounded-2xl flex justify-between items-center">
-                                            <div>
-                                                <p className="font-black text-sm capitalize">{t.fecha}</p>
-                                                <p className="text-[10px] text-gray-400 font-bold uppercase mt-1">Bruto: ${(neto + t.nafta).toLocaleString()} | Nafta: ${t.nafta}</p>
-                                            </div>
-                                            <div className="text-right flex items-center gap-4">
-                                                <div>
-                                                    <p className="text-[10px] text-cyan-500 font-black uppercase">Neto Limpio</p>
-                                                    <p className="font-black text-xl">${neto.toLocaleString()}</p>
+                                <h3 className="font-black text-lg mb-4 text-cyan-300 uppercase italic">Historial y Balances</h3>
+                                {Object.keys(groupedHistorial).length === 0 ? <p className="text-center text-gray-500 p-6">No hay registros aún.</p> : 
+                                    Object.entries(groupedHistorial).map(([month, monthData]) => (
+                                        <div key={month} className="mb-4">
+                                            <button onClick={() => setExpandedMonth(expandedMonth === month ? null : month)} className="w-full glass p-4 rounded-2xl flex justify-between items-center text-cyan-300 font-black uppercase transition-all">
+                                                <span>{month}</span>
+                                                <span>${monthData.totalNeto.toLocaleString()}</span>
+                                            </button>
+                                            {expandedMonth === month && (
+                                                <div className="pl-4 mt-3 space-y-3">
+                                                    {Object.entries(monthData.weeks).map(([week, weekData]) => (
+                                                        <div key={week}>
+                                                            <button onClick={() => setExpandedWeek(expandedWeek === week ? null : week)} className="w-full bg-cyan-900/20 p-3 rounded-xl flex justify-between items-center text-gray-300 font-bold text-xs uppercase border border-cyan-900/50">
+                                                                <span>{week}</span>
+                                                                <span className="text-cyan-400">${weekData.totalNeto.toLocaleString()}</span>
+                                                            </button>
+                                                            {expandedWeek === week && (
+                                                                <div className="mt-2 space-y-2">
+                                                                    {weekData.days.map(t => {
+                                                                        const neto = (t.base + (t.propinaOnline||0) + (t.logros||0) + (t.bonos||0)) - (t.nafta||0);
+                                                                        return (
+                                                                            <div key={t.id} className="glass p-4 rounded-2xl flex justify-between items-center bg-black/60">
+                                                                                <div>
+                                                                                    <p className="font-black text-xs capitalize text-white">{t.fecha}</p>
+                                                                                    <p className="text-[9px] text-gray-400 font-bold mt-1 uppercase">
+                                                                                        App: ${(t.base+(t.logros||0)+(t.bonos||0)).toLocaleString()} | Prop: ${t.propinaOnline} | Adel: ${t.adelantosEfectivo} | Nafta: ${t.nafta}
+                                                                                    </p>
+                                                                                </div>
+                                                                                <div className="text-right flex items-center gap-2">
+                                                                                    <div className="mr-2">
+                                                                                        <p className="text-[9px] text-cyan-500 font-black uppercase">Neto</p>
+                                                                                        <p className="font-black text-sm">${neto.toLocaleString()}</p>
+                                                                                    </div>
+                                                                                    <button onClick={() => editarTurno(t)} className="text-gray-400 hover:text-amber-400 p-2"><Icons.Edit /></button>
+                                                                                    <button onClick={() => { if(window.confirm('¿Borrar jornada?')) db.collection(`usuarios/${user.uid}/turnos`).doc(t.id).delete(); }} className="text-gray-600 hover:text-rose-500 p-2"><Icons.Trash /></button>
+                                                                                </div>
+                                                                            </div>
+                                                                        )
+                                                                    })}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    ))}
                                                 </div>
-                                                <button onClick={() => {
-                                                    if(window.confirm('¿Borrar jornada?')) db.collection(`usuarios/${user.uid}/turnos`).doc(t.id).delete();
-                                                }} className="text-gray-600 hover:text-rose-500 p-2"><Icons.Trash /></button>
-                                            </div>
+                                            )}
                                         </div>
-                                    )
-                                })}
+                                    ))
+                                }
                             </div>
                         )}
                     </main>
 
-                    {/* NAVEGACIÓN INFERIOR */}
                     <nav className="fixed bottom-0 w-full glass bg-black/90 pb-safe pt-2 px-6 rounded-t-3xl border-t border-white/5 z-50">
                         <div className="flex justify-between items-center max-w-md mx-auto py-3">
                             <button onClick={() => setTab('registro')} className={`flex flex-col items-center gap-1 transition-all ${tab==='registro' ? 'text-cyan-400 scale-110' : 'text-gray-500'}`}><Icons.Home /><span className="text-[9px] font-black uppercase">Registro</span></button>

@@ -39,6 +39,8 @@
         .num-font { font-variant-numeric: tabular-nums; }
         .loader { border: 3px solid rgba(255,255,255,0.1); border-top-color: #00FFCC; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
+        /* Ajuste para que el ícono del calendario se vea bien en fondos oscuros */
+        input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); }
     </style>
 </head>
 <body>
@@ -78,7 +80,15 @@
             const [configCorte, setConfigCorte] = useState({ dia: 2, hora: "16:00" }); 
             const [ocrLoading, setOcrLoading] = useState(false);
             
-            const [formData, setFormData] = useState({ base: '', propinaOnline: '', logros: '', bonos: '', adelantosEfectivo: '', nafta: '' });
+            const [formData, setFormData] = useState({ 
+                base: '', 
+                propinaOnline: '', 
+                logros: '', 
+                bonos: '', 
+                adelantosEfectivo: '', 
+                nafta: '',
+                fechaRegistro: new Date().toISOString().split('T')[0] // Formato YYYY-MM-DD para el calendario
+            });
 
             useEffect(() => {
                 const unsub = auth.onAuthStateChanged(u => { 
@@ -89,15 +99,14 @@
             }, []);
 
             useEffect(() => {
-                // ESCUDO ANTI-ERROR: Evita que intente leer 'uid' si no estás logueado
                 if (!user) return; 
                 
-                // RUTAS CORREGIDAS A 'users' PARA RECUPERAR TU HISTORIAL
-                const unsub = db.collection(`users/${user.uid}/turnos`).orderBy('timestamp', 'desc').onSnapshot(s => {
+                // RESTAURADO A 'usuarios' PARA BUSCAR TU HISTORIAL ORIGINAL
+                const unsub = db.collection(`usuarios/${user.uid}/turnos`).orderBy('timestamp', 'desc').onSnapshot(s => {
                     setTurnos(s.docs.map(d => ({id: d.id, ...d.data()})));
                 }, e => console.error("Error historial:", e));
                 
-                const unsubConfig = db.collection(`users/${user.uid}/config`).doc('corte').onSnapshot(d => {
+                const unsubConfig = db.collection(`usuarios/${user.uid}/config`).doc('corte').onSnapshot(d => {
                     if (d.exists) setConfigCorte(d.data());
                 }, e => console.error("Error config:", e));
                 
@@ -115,7 +124,14 @@
                     const extractNum = (keyword) => {
                         const regex = new RegExp(`${keyword}[^0-9]*([0-9.,]+)`, 'i');
                         const match = text.match(regex);
-                        return match ? match[1].replace(/[^0-9]/g, '') : '';
+                        if (match) {
+                            let numStr = match[1];
+                            // CORTAMOS EXACTAMENTE EN EL PUNTO PARA DESCARTAR LOS CÉNTIMOS
+                            let integerPart = numStr.split('.')[0];
+                            // LIMPIAMOS LAS COMAS
+                            return integerPart.replace(/[^0-9]/g, '');
+                        }
+                        return '';
                     };
 
                     setFormData(prev => ({
@@ -125,7 +141,7 @@
                         logros: extractNum('logro') || prev.logros,
                         bonos: extractNum('bono') || prev.bonos
                     }));
-                    alert("¡Escaneo completo! Revisá los montos por si acaso.");
+                    alert("¡Escaneo completo! Centavos ignorados con éxito.");
                 } catch (error) {
                     alert("Hubo un error al leer la imagen.");
                 }
@@ -137,15 +153,23 @@
                 if (!user) return alert("Error: No has iniciado sesión.");
                 
                 const d = formData;
+                // Creamos la fecha exacta respetando el día que elegiste en el calendario
+                const dateObj = new Date(d.fechaRegistro + 'T12:00:00');
+                const fechaFormat = dateObj.toLocaleDateString('es-AR', { weekday: 'long', year: 'numeric', month: 'numeric', day: 'numeric' });
+
                 const payload = {
                     base: Number(d.base||0), propinaOnline: Number(d.propinaOnline||0),
                     logros: Number(d.logros||0), bonos: Number(d.bonos||0),
                     adelantosEfectivo: Number(d.adelantosEfectivo||0), nafta: Number(d.nafta||0),
-                    fecha: new Date().toLocaleDateString('es-AR', { weekday: 'long', year: 'numeric', month: 'numeric', day: 'numeric' }), timestamp: new Date().getTime()
+                    fecha: fechaFormat, 
+                    timestamp: dateObj.getTime()
                 };
                 
-                await db.collection(`users/${user.uid}/turnos`).add(payload);
-                setFormData({ base: '', propinaOnline: '', logros: '', bonos: '', adelantosEfectivo: '', nafta: '' });
+                await db.collection(`usuarios/${user.uid}/turnos`).add(payload);
+                setFormData({ 
+                    base: '', propinaOnline: '', logros: '', bonos: '', adelantosEfectivo: '', nafta: '',
+                    fechaRegistro: new Date().toISOString().split('T')[0] // Resetea el calendario a hoy
+                });
                 alert("Jornada Guardada con Éxito");
             };
 
@@ -215,6 +239,12 @@
                                     </label>
 
                                     <form onSubmit={guardarTurno} className="space-y-4 relative z-10">
+                                        
+                                        <div className="mb-4">
+                                            <label className="text-[10px] uppercase text-gray-400 font-bold ml-2">Fecha del Turno</label>
+                                            <input type="date" required value={formData.fechaRegistro} onChange={e=>setFormData({...formData, fechaRegistro: e.target.value})} className="w-full bg-black/50 border border-gray-800 p-4 rounded-2xl font-bold text-lg text-gray-300 outline-none focus:border-cyan-500 mt-1" />
+                                        </div>
+
                                         <div className="grid grid-cols-2 gap-4">
                                             <div><label className="text-[10px] uppercase text-gray-400 font-bold ml-2">Base App $</label><input type="number" required value={formData.base} onChange={e=>setFormData({...formData, base: e.target.value})} className="w-full bg-black/50 border border-gray-800 p-4 rounded-2xl font-black text-xl outline-none focus:border-cyan-500" /></div>
                                             <div><label className="text-[10px] uppercase text-gray-400 font-bold ml-2">Propinas Online $</label><input type="number" required value={formData.propinaOnline} onChange={e=>setFormData({...formData, propinaOnline: e.target.value})} className="w-full bg-black/50 border border-gray-800 p-4 rounded-2xl font-black text-xl outline-none focus:border-cyan-500" /></div>
@@ -266,14 +296,14 @@
                                         <select value={configCorte.dia} onChange={e => {
                                             const n = { ...configCorte, dia: Number(e.target.value) };
                                             setConfigCorte(n); 
-                                            if (user) db.collection(`users/${user.uid}/config`).doc('corte').set(n);
+                                            if (user) db.collection(`usuarios/${user.uid}/config`).doc('corte').set(n);
                                         }} className="bg-black/50 border border-gray-800 p-4 rounded-xl font-bold text-sm outline-none">
                                             <option value={1}>Lunes</option><option value={2}>Martes</option><option value={3}>Miércoles</option><option value={4}>Jueves</option><option value={5}>Viernes</option><option value={6}>Sábado</option><option value={0}>Domingo</option>
                                         </select>
                                         <input type="time" value={configCorte.hora} onChange={e => {
                                             const n = { ...configCorte, hora: e.target.value };
                                             setConfigCorte(n); 
-                                            if (user) db.collection(`users/${user.uid}/config`).doc('corte').set(n);
+                                            if (user) db.collection(`usuarios/${user.uid}/config`).doc('corte').set(n);
                                         }} className="bg-black/50 border border-gray-800 p-4 rounded-xl font-bold text-sm outline-none" />
                                     </div>
                                 </div>
@@ -298,7 +328,7 @@
                                                     <p className="font-black text-xl">${neto.toLocaleString()}</p>
                                                 </div>
                                                 <button onClick={() => {
-                                                    if(window.confirm('¿Borrar jornada?')) db.collection(`users/${user.uid}/turnos`).doc(t.id).delete();
+                                                    if(window.confirm('¿Borrar jornada?')) db.collection(`usuarios/${user.uid}/turnos`).doc(t.id).delete();
                                                 }} className="text-gray-600 hover:text-rose-500 p-2"><Icons.Trash /></button>
                                             </div>
                                         </div>

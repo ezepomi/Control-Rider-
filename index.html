@@ -68,7 +68,8 @@
             const [authChecking, setAuthChecking] = useState(true);
             const [tab, setTab] = useState('registro');
             const [turnos, setTurnos] = useState([]);
-            const [configCorte, setConfigCorte] = useState({ dia: 2, hora: "16:00", usaHora: true }); 
+            const [configCorte, setConfigCorte] = useState({ dia: 2, hora: "16:00" }); 
+            const [usaHoraTurno, setUsaHoraTurno] = useState(false); // Por defecto apagado (23:59)
             const [ocrLoading, setOcrLoading] = useState(false);
             
             const [expandedMonth, setExpandedMonth] = useState(null);
@@ -101,7 +102,7 @@
                 }, e => console.error(e));
                 
                 const unsubConfig = db.collection(`usuarios/${user.uid}/config`).doc('corte').onSnapshot(d => {
-                    if (d.exists) setConfigCorte({ usaHora: true, ...d.data() }); 
+                    if (d.exists) setConfigCorte(d.data()); 
                 }, e => console.error(e));
                 
                 return () => { unsub(); unsubConfig(); };
@@ -161,9 +162,11 @@
                 
                 const d = formData;
                 const [year, month, day] = d.fechaRegistro.split('-');
-                const [h, m] = (d.horaRegistro || "12:00").split(':');
                 
-                // Creado con la fecha y hora exactas
+                // Si el switch está prendido usa la hora del input, si no, asume 23:59
+                const [h, m] = usaHoraTurno ? (d.horaRegistro || "12:00").split(':') : ["23", "59"];
+                const horaAguardar = usaHoraTurno ? d.horaRegistro : "23:59";
+                
                 const dateObj = new Date(year, month - 1, day, h, m, 0); 
                 const fechaFormat = dateObj.toLocaleDateString('es-AR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
@@ -171,7 +174,7 @@
                     base: Number(d.base||0), propinaOnline: Number(d.propinaOnline||0),
                     logros: Number(d.logros||0), bonos: Number(d.bonos||0),
                     adelantosEfectivo: Number(d.adelantosEfectivo||0), nafta: Number(d.nafta||0),
-                    fecha: fechaFormat, horaStr: d.horaRegistro, timestamp: dateObj.getTime()
+                    fecha: fechaFormat, horaStr: horaAguardar, timestamp: dateObj.getTime()
                 };
                 
                 await db.collection(`usuarios/${user.uid}/turnos`).add(payload);
@@ -183,6 +186,7 @@
                 setFormData(prev => ({ 
                     base: '', propinaOnline: '', logros: '', bonos: '', adelantosEfectivo: '', nafta: '', fechaRegistro: defaultDate, horaRegistro: defaultTime
                 }));
+                setUsaHoraTurno(false); // Resetea el switch
                 alert("Jornada Guardada con Éxito");
             };
 
@@ -218,12 +222,9 @@
                 
                 lastCutoff.setDate(now.getDate() - daysSinceCutoff);
                 
-                if (configCorte.usaHora !== false) {
-                    const [h, m] = (configCorte.hora || "16:00").split(':');
-                    lastCutoff.setHours(h, m, 0, 0);
-                } else {
-                    lastCutoff.setHours(23, 59, 59, 999);
-                }
+                // Siempre usa la hora configurada (ya no se puede apagar)
+                const [h, m] = (configCorte.hora || "16:00").split(':');
+                lastCutoff.setHours(h, m, 0, 0);
 
                 if (now < lastCutoff) lastCutoff.setDate(lastCutoff.getDate() - 7);
 
@@ -344,12 +345,23 @@
                                         
                                         <div className="grid grid-cols-2 gap-4 mb-4">
                                             <div>
-                                                <label className="text-[10px] uppercase text-gray-400 font-bold ml-2">Fecha del Turno</label>
+                                                <label className="text-[10px] uppercase text-gray-400 font-bold ml-2 mb-1 block">Fecha del Turno</label>
                                                 <input type="date" required value={formData.fechaRegistro} onChange={e=>setFormData({...formData, fechaRegistro: e.target.value})} className="w-full bg-black/50 border border-gray-800 p-4 rounded-2xl font-bold text-sm text-gray-300 outline-none focus:border-cyan-500 mt-1" />
                                             </div>
                                             <div>
-                                                <label className="text-[10px] uppercase text-gray-400 font-bold ml-2">Hora del Turno</label>
-                                                <input type="time" required value={formData.horaRegistro} onChange={e=>setFormData({...formData, horaRegistro: e.target.value})} className="w-full bg-black/50 border border-gray-800 p-4 rounded-2xl font-bold text-sm text-gray-300 outline-none focus:border-cyan-500 mt-1" />
+                                                {/* SWITCH PARA HORA DE TURNO */}
+                                                <div className="flex items-center justify-between ml-2 mb-1">
+                                                    <label className="text-[10px] uppercase text-gray-400 font-bold">Hora exacta</label>
+                                                    <label className="relative inline-flex items-center cursor-pointer">
+                                                        <input type="checkbox" checked={usaHoraTurno} onChange={e => setUsaHoraTurno(e.target.checked)} className="sr-only peer" />
+                                                        <div className="w-7 h-4 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-cyan-500"></div>
+                                                    </label>
+                                                </div>
+                                                {usaHoraTurno ? (
+                                                    <input type="time" required value={formData.horaRegistro} onChange={e=>setFormData({...formData, horaRegistro: e.target.value})} className="w-full bg-black/50 border border-gray-800 p-4 rounded-2xl font-bold text-sm text-gray-300 outline-none focus:border-cyan-500 mt-1" />
+                                                ) : (
+                                                    <div className="w-full bg-black/50 border border-gray-800 p-4 rounded-2xl font-bold text-sm text-gray-500 mt-1 flex items-center justify-center">23:59 hs</div>
+                                                )}
                                             </div>
                                         </div>
 
@@ -374,40 +386,23 @@
                                     </form>
                                 </div>
 
-                                {/* CONFIGURACIÓN DE CORTE (Movido a Registro) */}
+                                {/* CONFIGURACIÓN DE CORTE FIJO */}
                                 <div className="glass p-6 rounded-3xl border border-amber-900/30 bg-black/40">
                                     <h3 className="font-black text-xs mb-4 text-amber-400 uppercase">Configuración Corte Semanal (PeYa)</h3>
-                                    <p className="text-[10px] text-gray-400 mb-4">Elegí qué día y hora hace el corte la App para calcular con precisión tu próximo cobro.</p>
-                                    <div className="space-y-4">
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <select value={configCorte.dia} onChange={e => {
-                                                const n = { ...configCorte, dia: Number(e.target.value) };
-                                                setConfigCorte(n); 
-                                                if (user) db.collection(`usuarios/${user.uid}/config`).doc('corte').set(n);
-                                            }} className="bg-black/50 border border-gray-800 p-4 rounded-xl font-bold text-sm outline-none text-white appearance-none">
-                                                <option value={1}>Lunes</option><option value={2}>Martes</option><option value={3}>Miércoles</option><option value={4}>Jueves</option><option value={5}>Viernes</option><option value={6}>Sábado</option><option value={0}>Domingo</option>
-                                            </select>
-                                            
-                                            <div className="flex items-center justify-between bg-black/50 border border-gray-800 p-4 rounded-xl">
-                                                <span className="font-bold text-xs text-gray-400 uppercase">Usar Hora</span>
-                                                <label className="relative inline-flex items-center cursor-pointer">
-                                                    <input type="checkbox" checked={configCorte.usaHora !== false} onChange={e => {
-                                                        const n = { ...configCorte, usaHora: e.target.checked };
-                                                        setConfigCorte(n);
-                                                        if (user) db.collection(`usuarios/${user.uid}/config`).doc('corte').set(n);
-                                                    }} className="sr-only peer" />
-                                                    <div className="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-cyan-500"></div>
-                                                </label>
-                                            </div>
-                                        </div>
-                                        
-                                        {configCorte.usaHora !== false && (
-                                            <input type="time" value={configCorte.hora || "16:00"} onChange={e => {
-                                                const n = { ...configCorte, hora: e.target.value };
-                                                setConfigCorte(n); 
-                                                if (user) db.collection(`usuarios/${user.uid}/config`).doc('corte').set(n);
-                                            }} className="w-full bg-black/50 border border-gray-800 p-4 rounded-xl font-bold text-sm outline-none text-white" />
-                                        )}
+                                    <p className="text-[10px] text-gray-400 mb-4">Elegí qué día y a qué hora exacta hace el corte la App para calcular el próximo cobro.</p>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <select value={configCorte.dia} onChange={e => {
+                                            const n = { ...configCorte, dia: Number(e.target.value) };
+                                            setConfigCorte(n); 
+                                            if (user) db.collection(`usuarios/${user.uid}/config`).doc('corte').set(n);
+                                        }} className="bg-black/50 border border-gray-800 p-4 rounded-xl font-bold text-sm outline-none text-white appearance-none">
+                                            <option value={1}>Lunes</option><option value={2}>Martes</option><option value={3}>Miércoles</option><option value={4}>Jueves</option><option value={5}>Viernes</option><option value={6}>Sábado</option><option value={0}>Domingo</option>
+                                        </select>
+                                        <input type="time" value={configCorte.hora || "16:00"} onChange={e => {
+                                            const n = { ...configCorte, hora: e.target.value };
+                                            setConfigCorte(n); 
+                                            if (user) db.collection(`usuarios/${user.uid}/config`).doc('corte').set(n);
+                                        }} className="w-full bg-black/50 border border-gray-800 p-4 rounded-xl font-bold text-sm outline-none text-white" />
                                     </div>
                                 </div>
                             </div>
@@ -418,7 +413,7 @@
                             <div className="animate-in fade-in space-y-6">
                                 <div className="glass p-6 rounded-3xl bg-cyan-900/10 border-cyan-900/30">
                                     <h3 className="font-black text-lg mb-2 text-cyan-300 uppercase italic">Liquidación en Curso</h3>
-                                    <p className="text-xs text-gray-400 mb-6">Desde el último corte: {calcularCobros.lastCutoff.toLocaleDateString('es-AR')} a las {configCorte.usaHora !== false ? configCorte.hora + 'hs' : '23:59hs'}</p>
+                                    <p className="text-xs text-gray-400 mb-6">Desde el último corte: {calcularCobros.lastCutoff.toLocaleDateString('es-AR')} a las {configCorte.hora} hs</p>
                                     
                                     <div className="space-y-4">
                                         <div className="glass p-4 rounded-2xl border-emerald-900/50">

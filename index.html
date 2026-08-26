@@ -31,8 +31,7 @@
         .num-font { font-variant-numeric: tabular-nums; }
         .loader { border: 3px solid rgba(255,255,255,0.1); border-top-color: #00FFCC; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
-        input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); }
-        input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1); }
+        input[type="date"]::-webkit-calendar-picker-indicator, input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1); }
     </style>
 </head>
 <body>
@@ -76,13 +75,15 @@
             const [expandedWeek, setExpandedWeek] = useState(null);
             
             const [formData, setFormData] = useState({ 
-                base: '', propinaOnline: '', logros: '', bonos: '', adelantosEfectivo: '', nafta: '', fechaRegistro: ''
+                base: '', propinaOnline: '', logros: '', bonos: '', adelantosEfectivo: '', nafta: '', fechaRegistro: '', horaRegistro: ''
             });
 
+            // Setear la fecha y hora local correcta al iniciar
             useEffect(() => {
                 const today = new Date();
                 const defaultDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-                setFormData(prev => ({ ...prev, fechaRegistro: defaultDate }));
+                const defaultTime = `${String(today.getHours()).padStart(2, '0')}:${String(today.getMinutes()).padStart(2, '0')}`;
+                setFormData(prev => ({ ...prev, fechaRegistro: defaultDate, horaRegistro: defaultTime }));
             }, []);
 
             useEffect(() => {
@@ -100,7 +101,7 @@
                 }, e => console.error(e));
                 
                 const unsubConfig = db.collection(`usuarios/${user.uid}/config`).doc('corte').onSnapshot(d => {
-                    if (d.exists) setConfigCorte({ usaHora: true, ...d.data() }); // Mantiene compatibilidad
+                    if (d.exists) setConfigCorte({ usaHora: true, ...d.data() }); 
                 }, e => console.error(e));
                 
                 return () => { unsub(); unsubConfig(); };
@@ -147,7 +148,7 @@
                         bonos: extractNum('bono') || prev.bonos,
                         fechaRegistro: foundDate || prev.fechaRegistro
                     }));
-                    alert("¡Escaneo completo! Centavos ignorados y fecha detectada.");
+                    alert("¡Escaneo completo! Revisá los montos extraídos.");
                 } catch (error) {
                     alert("Hubo un error al leer la imagen.");
                 }
@@ -160,23 +161,27 @@
                 
                 const d = formData;
                 const [year, month, day] = d.fechaRegistro.split('-');
-                const dateObj = new Date(year, month - 1, day, 12, 0, 0); 
+                const [h, m] = (d.horaRegistro || "12:00").split(':');
+                
+                // Creado con la fecha y hora exactas
+                const dateObj = new Date(year, month - 1, day, h, m, 0); 
                 const fechaFormat = dateObj.toLocaleDateString('es-AR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
                 const payload = {
                     base: Number(d.base||0), propinaOnline: Number(d.propinaOnline||0),
                     logros: Number(d.logros||0), bonos: Number(d.bonos||0),
                     adelantosEfectivo: Number(d.adelantosEfectivo||0), nafta: Number(d.nafta||0),
-                    fecha: fechaFormat, timestamp: dateObj.getTime()
+                    fecha: fechaFormat, horaStr: d.horaRegistro, timestamp: dateObj.getTime()
                 };
                 
                 await db.collection(`usuarios/${user.uid}/turnos`).add(payload);
                 
                 const today = new Date();
                 const defaultDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+                const defaultTime = `${String(today.getHours()).padStart(2, '0')}:${String(today.getMinutes()).padStart(2, '0')}`;
                 
                 setFormData(prev => ({ 
-                    base: '', propinaOnline: '', logros: '', bonos: '', adelantosEfectivo: '', nafta: '', fechaRegistro: defaultDate 
+                    base: '', propinaOnline: '', logros: '', bonos: '', adelantosEfectivo: '', nafta: '', fechaRegistro: defaultDate, horaRegistro: defaultTime
                 }));
                 alert("Jornada Guardada con Éxito");
             };
@@ -205,7 +210,6 @@
                 });
             };
 
-            // ALGORITMO ACTUALIZADO PARA LIQUIDACIONES HISTÓRICAS
             const calcularCobros = useMemo(() => {
                 const now = new Date();
                 const currentDay = now.getDay(); 
@@ -235,7 +239,6 @@
                 const transfPropinas = sumPropOnline;
                 const transfSueldo = (sumBase + sumLogros) - sumEfectivo;
 
-                // HISTORIAL DE LIQUIDACIONES PASADAS
                 const pastTurnos = turnos.filter(t => t.timestamp < lastCutoff.getTime());
                 const pastLiquidaciones = [];
 
@@ -338,9 +341,16 @@
                                     </label>
 
                                     <form onSubmit={guardarTurno} className="space-y-4 relative z-10">
-                                        <div className="mb-4">
-                                            <label className="text-[10px] uppercase text-gray-400 font-bold ml-2">Fecha del Turno</label>
-                                            <input type="date" required value={formData.fechaRegistro} onChange={e=>setFormData({...formData, fechaRegistro: e.target.value})} className="w-full bg-black/50 border border-gray-800 p-4 rounded-2xl font-bold text-lg text-gray-300 outline-none focus:border-cyan-500 mt-1" />
+                                        
+                                        <div className="grid grid-cols-2 gap-4 mb-4">
+                                            <div>
+                                                <label className="text-[10px] uppercase text-gray-400 font-bold ml-2">Fecha del Turno</label>
+                                                <input type="date" required value={formData.fechaRegistro} onChange={e=>setFormData({...formData, fechaRegistro: e.target.value})} className="w-full bg-black/50 border border-gray-800 p-4 rounded-2xl font-bold text-sm text-gray-300 outline-none focus:border-cyan-500 mt-1" />
+                                            </div>
+                                            <div>
+                                                <label className="text-[10px] uppercase text-gray-400 font-bold ml-2">Hora del Turno</label>
+                                                <input type="time" required value={formData.horaRegistro} onChange={e=>setFormData({...formData, horaRegistro: e.target.value})} className="w-full bg-black/50 border border-gray-800 p-4 rounded-2xl font-bold text-sm text-gray-300 outline-none focus:border-cyan-500 mt-1" />
+                                            </div>
                                         </div>
 
                                         <div className="grid grid-cols-2 gap-4">
@@ -363,35 +373,11 @@
                                         <button className="w-full bg-cyan-500 text-black py-5 rounded-2xl font-black uppercase tracking-widest mt-6 shadow-[0_0_20px_rgba(0,255,204,0.3)]">Guardar Jornada</button>
                                     </form>
                                 </div>
-                            </div>
-                        )}
 
-                        {/* PESTAÑA COBROS */}
-                        {tab === 'cobros' && (
-                            <div className="animate-in fade-in space-y-6">
-                                {/* LIQUIDACIÓN EN CURSO */}
-                                <div className="glass p-6 rounded-3xl bg-cyan-900/10 border-cyan-900/30">
-                                    <h3 className="font-black text-lg mb-2 text-cyan-300 uppercase italic">Liquidación en Curso</h3>
-                                    <p className="text-xs text-gray-400 mb-6">Desde el último corte: {calcularCobros.lastCutoff.toLocaleDateString('es-AR')} {configCorte.usaHora !== false ? configCorte.hora + 'hs' : '23:59hs'}</p>
-                                    
-                                    <div className="space-y-4">
-                                        <div className="glass p-4 rounded-2xl border-emerald-900/50">
-                                            <p className="text-[10px] uppercase font-bold text-gray-400 mb-1">Transferencia 1: Propinas Online</p>
-                                            <p className="text-3xl font-black text-emerald-400">${calcularCobros.transfPropinas.toLocaleString()}</p>
-                                        </div>
-                                        <div className="glass p-4 rounded-2xl border-amber-900/50">
-                                            <p className="text-[10px] uppercase font-bold text-gray-400 mb-1">Transferencia 2: Sueldo Base (App - Adelantos)</p>
-                                            <p className={`text-3xl font-black ${calcularCobros.transfSueldo >= 0 ? 'text-amber-400' : 'text-rose-500'}`}>
-                                                ${calcularCobros.transfSueldo.toLocaleString()}
-                                            </p>
-                                            {calcularCobros.transfSueldo < 0 && <p className="text-xs text-rose-400 mt-2 font-bold">¡Ojo! Tenés deuda. Te van a descontar de las propinas.</p>}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* CONFIGURACIÓN DE CORTE (SWITCH AÑADIDO) */}
-                                <div className="glass p-6 rounded-3xl">
-                                    <h3 className="font-black text-sm mb-4 text-gray-300 uppercase">Ajuste de Corte Semanal</h3>
+                                {/* CONFIGURACIÓN DE CORTE (Movido a Registro) */}
+                                <div className="glass p-6 rounded-3xl border border-amber-900/30 bg-black/40">
+                                    <h3 className="font-black text-xs mb-4 text-amber-400 uppercase">Configuración Corte Semanal (PeYa)</h3>
+                                    <p className="text-[10px] text-gray-400 mb-4">Elegí qué día y hora hace el corte la App para calcular con precisión tu próximo cobro.</p>
                                     <div className="space-y-4">
                                         <div className="grid grid-cols-2 gap-4">
                                             <select value={configCorte.dia} onChange={e => {
@@ -402,7 +388,6 @@
                                                 <option value={1}>Lunes</option><option value={2}>Martes</option><option value={3}>Miércoles</option><option value={4}>Jueves</option><option value={5}>Viernes</option><option value={6}>Sábado</option><option value={0}>Domingo</option>
                                             </select>
                                             
-                                            {/* SWITCH HORA */}
                                             <div className="flex items-center justify-between bg-black/50 border border-gray-800 p-4 rounded-xl">
                                                 <span className="font-bold text-xs text-gray-400 uppercase">Usar Hora</span>
                                                 <label className="relative inline-flex items-center cursor-pointer">
@@ -416,7 +401,6 @@
                                             </div>
                                         </div>
                                         
-                                        {/* INPUT DE HORA (Solo visible si el switch está prendido) */}
                                         {configCorte.usaHora !== false && (
                                             <input type="time" value={configCorte.hora || "16:00"} onChange={e => {
                                                 const n = { ...configCorte, hora: e.target.value };
@@ -424,6 +408,30 @@
                                                 if (user) db.collection(`usuarios/${user.uid}/config`).doc('corte').set(n);
                                             }} className="w-full bg-black/50 border border-gray-800 p-4 rounded-xl font-bold text-sm outline-none text-white" />
                                         )}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* PESTAÑA COBROS */}
+                        {tab === 'cobros' && (
+                            <div className="animate-in fade-in space-y-6">
+                                <div className="glass p-6 rounded-3xl bg-cyan-900/10 border-cyan-900/30">
+                                    <h3 className="font-black text-lg mb-2 text-cyan-300 uppercase italic">Liquidación en Curso</h3>
+                                    <p className="text-xs text-gray-400 mb-6">Desde el último corte: {calcularCobros.lastCutoff.toLocaleDateString('es-AR')} a las {configCorte.usaHora !== false ? configCorte.hora + 'hs' : '23:59hs'}</p>
+                                    
+                                    <div className="space-y-4">
+                                        <div className="glass p-4 rounded-2xl border-emerald-900/50">
+                                            <p className="text-[10px] uppercase font-bold text-gray-400 mb-1">Transferencia 1: Propinas Online</p>
+                                            <p className="text-3xl font-black text-emerald-400">${calcularCobros.transfPropinas.toLocaleString()}</p>
+                                        </div>
+                                        <div className="glass p-4 rounded-2xl border-amber-900/50">
+                                            <p className="text-[10px] uppercase font-bold text-gray-400 mb-1">Transferencia 2: Sueldo Base (App - Adelantos)</p>
+                                            <p className={`text-3xl font-black ${calcularCobros.transfSueldo >= 0 ? 'text-amber-400' : 'text-rose-500'}`}>
+                                                ${calcularCobros.transfSueldo.toLocaleString()}
+                                            </p>
+                                            {calcularCobros.transfSueldo < 0 && <p className="text-xs text-rose-400 mt-2 font-bold">¡Ojo! Tenés deuda. Te van a descontar de las propinas.</p>}
+                                        </div>
                                     </div>
                                 </div>
 
@@ -479,7 +487,7 @@
                                                                         return (
                                                                             <div key={t.id} className="glass p-4 rounded-2xl flex justify-between items-center bg-black/60">
                                                                                 <div>
-                                                                                    <p className="font-black text-xs capitalize text-white">{t.fecha}</p>
+                                                                                    <p className="font-black text-xs capitalize text-white">{t.fecha} {t.horaStr && `- ${t.horaStr}hs`}</p>
                                                                                     <p className="text-[9px] text-gray-400 font-bold mt-1 uppercase">
                                                                                         App: ${(t.base+(t.logros||0)+(t.bonos||0)).toLocaleString()} | Prop: ${t.propinaOnline} | Adel: ${t.adelantosEfectivo} | Nafta: ${t.nafta}
                                                                                     </p>
